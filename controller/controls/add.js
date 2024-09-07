@@ -15,3 +15,11 @@ exports.addToDraft = async (user, invoice) => {
   );
   return response.modifiedCount;
 };
+
+exports.addClient = async (user, client) => {
+  const response = await users.updateOne(
+    { email: user },
+    { $push: { clients: { ...client } } }
+  );
+  return response.modifiedCount;
+};

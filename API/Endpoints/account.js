@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { createAccount, getUser } = require("../../Model/User/User");
+const { addClient } = require("../../controller/controls/add");
 
 //?? //////////////////////////////////////////////////////////
 //  SIGN UP
@@ -52,14 +53,12 @@ exports.signIn = async (req, res) => {
       if (passwordMatch) {
         const { email } = user; //
         const token = jwt.sign({ userEmail: email }, "secret", {
-          expiresIn: "2m",
+          expiresIn: "10m",
         });
-        return res
-          .status(200)
-          .send({
-            response: `Welcome back ${email}`,
-            token: encodeURIComponent(token),
-          });
+        return res.status(200).send({
+          response: `Welcome back ${email}`,
+          token: encodeURIComponent(token),
+        });
       } else {
         res.status(403).send({ response: "Incorrect password" });
       }
@@ -76,5 +75,20 @@ exports.userAccount = async (req, res) => {
     res.status(200).send({ ...user });
   } catch (error) {
     res.status(500).send({ response: "connection error" });
+  }
+};
+exports.addNewClient = async (req, res) => {
+  const userEmail = req.user;
+  const client = req.body;
+
+  try {
+    const response = await addClient(userEmail, client);
+
+    return (
+      response &&
+      res.status(200).send({ response: "client successfully added" })
+    );
+  } catch (error) {
+    res.status(500).send({ reponse: "Operation failed try again" });
   }
 };

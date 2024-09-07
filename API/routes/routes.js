@@ -1,11 +1,17 @@
 const express = require("express");
-const { signIn, signUp, userAccount } = require("../Endpoints/account");
+const {
+  signIn,
+  signUp,
+  userAccount,
+  addNewClient,
+} = require("../Endpoints/account");
 const { Auth } = require("../../middleware/auth/Auth");
 const { onSubscription } = require("../../middleware/auth/subscriptionAuth");
 const {
   sendInvoice,
   draftInvoice,
   updateInvoice,
+  deleteInvoice,
 } = require("../Endpoints/invoicing");
 const { Proceed } = require("../Endpoints/proceed");
 
@@ -20,7 +26,7 @@ router.get("/dashboard", Auth, Proceed);
 router.post("/sign-in", signIn);
 router.post("/sign-up", signUp);
 
-router.delete("/invoice/delete/:id");
-router.post("/client/new");
+router.delete("/invoice/delete", Auth, deleteInvoice);
+router.post("/client/new", Auth, addNewClient);
 
 exports.routes = router;

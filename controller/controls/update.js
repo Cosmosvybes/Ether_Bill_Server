@@ -1,4 +1,3 @@
-const { getUser } = require("../../Model/User/User");
 const { users } = require("../../utils/Mongo/collection/collection");
 
 exports.update = async (user_, invoice) => {

@@ -1,5 +1,6 @@
 const { useAppSendInvoice } = require("../../controller");
 const { addToDraft } = require("../../controller/controls/add");
+const { deleteDoc } = require("../../controller/controls/delete");
 const { update } = require("../../controller/controls/update");
 
 exports.sendInvoice = async (req, res) => {
@@ -37,5 +38,20 @@ exports.updateInvoice = async (req, res) => {
     );
   } catch (error) {
     res.status(503).send({ response: "Something went wrong" });
+  }
+};
+
+exports.deleteInvoice = async (req, res) => {
+  const { id } = req.query;
+  const email = req.user;
+  try {
+    const response = await deleteDoc(Number(id), email);
+
+    return (
+      response.matchedCount &&
+      res.status(200).send({ response: "invoice deleted" })
+    );
+  } catch (error) {
+    res.status(500).send({ response: "Something went wrong" });
   }
 };

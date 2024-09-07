@@ -21,5 +21,3 @@ exports.useAppSendInvoice = async (user_) => {
   return sentRes;
   // then,  send invoice to customer with email template
 };
-
-
