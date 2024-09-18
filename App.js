@@ -14,11 +14,11 @@ app.use(json());
 // app use cors
 app.use(
   cors({
-    origin: "https://invoicelogger.netlify.app",
+    origin: "https://invoicelogger.netlify.app/",
     credentials: true,
-    optionsSuccessStatus: 200
+    optionsSuccessStatus: 200,
   })
 );
-
+// https://invoicelogger.netlify.app/
 app.use("/api", routes);
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
