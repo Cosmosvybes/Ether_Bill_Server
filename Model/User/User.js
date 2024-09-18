@@ -24,6 +24,8 @@ exports.createAccount = async (user) => {
   return result;
 };
 
+
+
 exports.getUser = async (email) => {
   const user = await users.findOne({ email: email });
   return user;
