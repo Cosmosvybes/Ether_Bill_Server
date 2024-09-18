@@ -4,6 +4,7 @@ const {
   signUp,
   userAccount,
   addNewClient,
+  accountSettings,
 } = require("../Endpoints/account");
 const { Auth } = require("../../middleware/auth/Auth");
 const { onSubscription } = require("../../middleware/auth/subscriptionAuth");
@@ -28,5 +29,6 @@ router.post("/sign-up", signUp);
 
 router.delete("/invoice/delete", Auth, deleteInvoice);
 router.post("/client/new", Auth, addNewClient);
+router.post("/account/settings", Auth, accountSettings);
 
 exports.routes = router;

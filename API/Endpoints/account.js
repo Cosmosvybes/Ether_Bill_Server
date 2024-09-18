@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { createAccount, getUser } = require("../../Model/User/User");
 const { addClient } = require("../../controller/controls/add");
+const { useAppSettings } = require("../../controller");
 
 //?? //////////////////////////////////////////////////////////
 //  SIGN UP
@@ -53,7 +54,7 @@ exports.signIn = async (req, res) => {
       if (passwordMatch) {
         const { email } = user; //
         const token = jwt.sign({ userEmail: email }, "secret", {
-          expiresIn: "10m",
+          expiresIn: "5h",
         });
         return res.status(200).send({
           response: `Welcome back ${email}`,
@@ -88,6 +89,20 @@ exports.addNewClient = async (req, res) => {
       response &&
       res.status(200).send({ response: "client successfully added" })
     );
+  } catch (error) {
+    res.status(500).send({ reponse: "Operation failed try again" });
+  }
+};
+
+exports.accountSettings = async (req, res) => {
+  const email = req.user;
+  const settingsData = req.body;
+  try {
+    const response = await useAppSettings(email, settingsData);
+    response &&
+      res
+        .status(200)
+        .send({ response: "Account settings updated successfully" });
   } catch (error) {
     res.status(500).send({ reponse: "Operation failed try again" });
   }

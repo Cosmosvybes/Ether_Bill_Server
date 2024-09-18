@@ -5,13 +5,20 @@ const { update } = require("../../controller/controls/update");
 
 exports.sendInvoice = async (req, res) => {
   const user = req.user;
+  const { receipient, htmlContent, invoice } = req.body;
   try {
-    const response = await useAppSendInvoice(user);
+    const response = await useAppSendInvoice(
+      user,
+      receipient,
+      htmlContent,
+      invoice
+    );
     return (
-      response && res.status(200).send({ response: "invoice sent to customer" })
+      response &&
+      res.status(200).send({ response: "invoice sucessfully sent ! 🎉" })
     );
   } catch (error) {
-    res.status(503).send({ response: "Something went wrong" });
+    res.status(503).send({ response: "Service unavailable" });
   }
 };
 
@@ -24,7 +31,7 @@ exports.draftInvoice = async (req, res) => {
       response && res.status(200).send({ response: "invoice added to draft" })
     );
   } catch (error) {
-    res.status(503).send({ response: "Something went wrong" });
+    res.status(503).send({ response: "Service unavailable" });
   }
 };
 
@@ -32,12 +39,10 @@ exports.updateInvoice = async (req, res) => {
   const user = req.user;
   const invoice = req.body;
   try {
-    const response = await update(user, invoice);
-    return (
-      response && res.status(200).send({ response: "invoice details updated" })
-    );
+    const update_Res = await update(user, invoice);
+    return update_Res && res.status(200).send({ response: "invoice updated" });
   } catch (error) {
-    res.status(503).send({ response: "Something went wrong" });
+    res.status(503).send({ response: "Service unavailable" });
   }
 };
 
@@ -46,12 +51,11 @@ exports.deleteInvoice = async (req, res) => {
   const email = req.user;
   try {
     const response = await deleteDoc(Number(id), email);
-
     return (
       response.matchedCount &&
       res.status(200).send({ response: "invoice deleted" })
     );
   } catch (error) {
-    res.status(500).send({ response: "Something went wrong" });
+    res.status(503).send({ response: "Service unavailbale, try again" });
   }
 };

@@ -1,8 +1,9 @@
 const { getUser } = require("../Model/User/User");
 const { users } = require("../utils/Mongo/collection/collection");
+const { mailer } = require("../utils/Nodemailer/Mailer");
 const { addSentInvoice } = require("./controls/add");
 
-exports.useAppSendInvoice = async (user_) => {
+exports.useAppSendInvoice = async (user_, receipient, email, invoice) => {
   const user = await getUser(user_);
 
   if (user.freemiumInvoiceCount != 0) {
@@ -11,13 +12,30 @@ exports.useAppSendInvoice = async (user_) => {
       { email: user_ },
       { $set: { freemiumInvoiceCount: freemiumCount } }
     );
-    const updateRes = await addSentInvoice(user_, {});
+    await mailer(
+      `Transaction Invoice -Reference ID ${invoice.id}📩 🎉`,
+      receipient,
+      email
+    );
+    const updateRes = await addSentInvoice(user_, invoice);
+    console.log(updateRes);
     return updateRes;
-    // then,  send invoice to customer with email template
   }
   const tokenBalance = (user.token -= 100);
   await users.updateOne({ email: user_ }, { $set: { token: tokenBalance } });
-  const sentRes = await addSentInvoice(user_, {});
+  await mailer(
+    `Transaction Invoice -Reference ID ${invoice.id}📩 🎉`,
+    receipient,
+    email
+  );
+  const sentRes = await addSentInvoice(user_, invoice);
+
   return sentRes;
-  // then,  send invoice to customer with email template
+};
+exports.useAppSettings = async (user_, settings) => {
+  const settingsRes = await users.updateOne(
+    { email: user_ },
+    { $set: { settings: { ...settings } } }
+  );
+  return settingsRes;
 };
