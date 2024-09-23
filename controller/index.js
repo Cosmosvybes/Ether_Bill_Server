@@ -3,7 +3,13 @@ const { users } = require("../utils/Mongo/collection/collection");
 const { mailer } = require("../utils/Nodemailer/Mailer");
 const { addSentInvoice } = require("./controls/add");
 
-exports.useAppSendInvoice = async (user_, receipient, email, invoice) => {
+exports.useAppSendInvoice = async (
+  user_,
+  receipient,
+  email,
+  invoice,
+  sendAsMessage
+) => {
   const user = await getUser(user_);
 
   if (user.freemiumInvoiceCount != 0) {
@@ -18,7 +24,9 @@ exports.useAppSendInvoice = async (user_, receipient, email, invoice) => {
       email
     );
     const updateRes = await addSentInvoice(user_, invoice);
-    console.log(updateRes);
+    if (sendAsMessage) {
+      await users.updateOne({ email: receipient }, { $push: { inbox: invoice } });
+    }
     return updateRes;
   }
   const tokenBalance = (user.token -= 100);
@@ -28,8 +36,11 @@ exports.useAppSendInvoice = async (user_, receipient, email, invoice) => {
     receipient,
     email
   );
-  const sentRes = await addSentInvoice(user_, invoice);
 
+  const sentRes = await addSentInvoice(user_, invoice);
+  if (sendAsMessage) {
+    await users.updateOne({ email: email }, { $push: { inbox: invoice } });
+  }
   return sentRes;
 };
 exports.useAppSettings = async (user_, settings) => {

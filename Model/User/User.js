@@ -7,6 +7,7 @@ exports.createAccount = async (user) => {
     sent: [],
     revenue: 0,
     clients: [],
+    inbox: [],
     id: Date.now(),
     freemiumInvoiceCount: 0,
     token: 0,

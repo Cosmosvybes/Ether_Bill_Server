@@ -1,4 +1,3 @@
-const { getUser } = require("../../Model/User/User");
 const { users } = require("../../utils/Mongo/collection/collection");
 
 exports.addSentInvoice = async (user, invoice) => {
@@ -9,6 +8,7 @@ exports.addSentInvoice = async (user, invoice) => {
   );
   invoice.status = "Draft";
   await users.updateOne({ email: user }, { $pull: { draft: invoice } });
+ 
   return response.modifiedCount;
 };
 

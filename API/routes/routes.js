@@ -13,6 +13,7 @@ const {
   draftInvoice,
   updateInvoice,
   deleteInvoice,
+  getInvoice,
 } = require("../Endpoints/invoicing");
 const { Proceed } = require("../Endpoints/proceed");
 
@@ -20,6 +21,7 @@ let router = express.Router();
 
 router.post("/new/invoice", Auth, draftInvoice);
 router.get("/user/", Auth, userAccount);
+router.get("/invoice", Auth, getInvoice);
 router.post("/send/invoice", Auth, onSubscription, sendInvoice);
 
 router.put("/invoice/updates", Auth, updateInvoice);

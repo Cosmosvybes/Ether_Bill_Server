@@ -1,17 +1,21 @@
 const { useAppSendInvoice } = require("../../controller");
 const { addToDraft } = require("../../controller/controls/add");
 const { deleteDoc } = require("../../controller/controls/delete");
+const { findInvoice } = require("../../controller/controls/get");
 const { update } = require("../../controller/controls/update");
 
 exports.sendInvoice = async (req, res) => {
   const user = req.user;
+  const { sendAsMessage } = req.query;
+  console.log(sendAsMessage)
   const { receipient, htmlContent, invoice } = req.body;
   try {
     const response = await useAppSendInvoice(
       user,
       receipient,
       htmlContent,
-      invoice
+      invoice,
+      sendAsMessage
     );
     return (
       response &&
@@ -55,6 +59,17 @@ exports.deleteInvoice = async (req, res) => {
       response.matchedCount &&
       res.status(200).send({ response: "invoice deleted" })
     );
+  } catch (error) {
+    res.status(503).send({ response: "Service unavailbale, try again" });
+  }
+};
+
+exports.getInvoice = async (req, res) => {
+  const { id } = req.query;
+  const email = req.user;
+  try {
+    const invoiceInformation = await findInvoice(email, id);
+    res.status(200).send({ ...invoiceInformation });
   } catch (error) {
     res.status(503).send({ response: "Service unavailbale, try again" });
   }
