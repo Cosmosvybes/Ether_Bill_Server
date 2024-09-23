@@ -14,7 +14,7 @@ app.use(json());
 // app use cors
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://invoicelogger.netlify.app",
     credentials: true,
     optionsSuccessStatus: 200,
   })
