@@ -1,8 +1,8 @@
-const { useAppSendInvoice } = require("../../controller");
+const { useAppSendInvoice, addRevenue } = require("../../controller");
 const { addToDraft } = require("../../controller/controls/add");
 const { deleteDoc } = require("../../controller/controls/delete");
 const { findInvoice } = require("../../controller/controls/get");
-const { update } = require("../../controller/controls/update");
+const { update, paidUpdate } = require("../../controller/controls/update");
 
 exports.sendInvoice = async (req, res) => {
   const user = req.user;
@@ -69,6 +69,23 @@ exports.getInvoice = async (req, res) => {
   try {
     const invoiceInformation = await findInvoice(email, id);
     res.status(200).send({ ...invoiceInformation });
+  } catch (error) {
+    res.status(503).send({ response: "Service unavailbale, try again" });
+  }
+};
+
+exports.markAsPaid = async (req, res) => {
+  const { invoiceID } = req.query;
+  const email = req.user;
+  try {
+    const response = await addRevenue(email, invoiceID);
+    await paidUpdate(email, invoiceID);
+    return (
+      response &&
+      res
+        .status(200)
+        .send({ response: "Whoops, revenue generated 🎉🤑 More sales!!!" })
+    );
   } catch (error) {
     res.status(503).send({ response: "Service unavailbale, try again" });
   }

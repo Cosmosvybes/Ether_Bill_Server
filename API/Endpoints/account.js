@@ -3,7 +3,8 @@ const jwt = require("jsonwebtoken");
 const { createAccount, getUser } = require("../../Model/User/User");
 const { addClient } = require("../../controller/controls/add");
 const { useAppSettings } = require("../../controller");
-
+const { config } = require("dotenv");
+config();
 //?? //////////////////////////////////////////////////////////
 //  SIGN UP
 //?? //////////////////////////////////////////////////////////
@@ -53,7 +54,7 @@ exports.signIn = async (req, res) => {
       );
       if (passwordMatch) {
         const { email } = user; //
-        const token = jwt.sign({ userEmail: email }, "secret", {
+        const token = jwt.sign({ userEmail: email }, process.env.EMAILPASS, {
           expiresIn: "5h",
         });
         return res.status(200).send({
@@ -69,6 +70,9 @@ exports.signIn = async (req, res) => {
   }
 };
 
+//?? //////////////////////////////////////////////////////////
+// USER ACCOUNT
+//?? //////////////////////////////////////////////////////////
 exports.userAccount = async (req, res) => {
   const userEmail = req.user;
   try {
@@ -78,6 +82,11 @@ exports.userAccount = async (req, res) => {
     res.status(500).send({ response: "connection error" });
   }
 };
+
+//?? //////////////////////////////////////////////////////////
+// ADD CLIENT
+//?? //////////////////////////////////////////////////////////
+
 exports.addNewClient = async (req, res) => {
   const userEmail = req.user;
   const client = req.body;
@@ -94,6 +103,9 @@ exports.addNewClient = async (req, res) => {
   }
 };
 
+//?? //////////////////////////////////////////////////////////
+// ACCOUNT SETTINGS
+//?? //////////////////////////////////////////////////////////
 exports.accountSettings = async (req, res) => {
   const email = req.user;
   const settingsData = req.body;

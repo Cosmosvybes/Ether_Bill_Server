@@ -8,6 +8,8 @@ exports.createAccount = async (user) => {
     revenue: 0,
     clients: [],
     inbox: [],
+    paid: [],
+    overdue: [],
     id: Date.now(),
     freemiumInvoiceCount: 0,
     token: 0,
@@ -24,8 +26,6 @@ exports.createAccount = async (user) => {
   });
   return result;
 };
-
-
 
 exports.getUser = async (email) => {
   const user = await users.findOne({ email: email });
