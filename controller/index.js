@@ -11,7 +11,6 @@ exports.useAppSendInvoice = async (
   sendAsMessage
 ) => {
   const user = await getUser(user_);
-
   if (user.freemiumInvoiceCount != 0) {
     let freemiumCount = user.freemiumInvoiceCount - 1;
     await users.updateOne(
@@ -25,7 +24,10 @@ exports.useAppSendInvoice = async (
     );
     const updateRes = await addSentInvoice(user_, invoice);
     if (sendAsMessage) {
-      await users.updateOne({ email: receipient }, { $push: { inbox: invoice } });
+      await users.updateOne(
+        { email: receipient },
+        { $push: { inbox: invoice } }
+      );
     }
     return updateRes;
   }
@@ -39,7 +41,7 @@ exports.useAppSendInvoice = async (
 
   const sentRes = await addSentInvoice(user_, invoice);
   if (sendAsMessage) {
-    await users.updateOne({ email: email }, { $push: { inbox: invoice } });
+    await users.updateOne({ email: receipient }, { $push: { inbox: invoice } });
   }
   return sentRes;
 };

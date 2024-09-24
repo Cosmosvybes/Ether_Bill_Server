@@ -7,7 +7,6 @@ const { update } = require("../../controller/controls/update");
 exports.sendInvoice = async (req, res) => {
   const user = req.user;
   const { sendAsMessage } = req.query;
-  console.log(sendAsMessage)
   const { receipient, htmlContent, invoice } = req.body;
   try {
     const response = await useAppSendInvoice(
