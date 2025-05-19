@@ -5,9 +5,12 @@ config();
 exports.Auth = (req, res, next) => {
   const tokenHeader = decodeURIComponent(req.header("Authorization"));
   const token = tokenHeader.split(" ")[1];
+  // console.log(token);
   try {
     if (!token) {
-      return res.status(401).send({ response: "please sign in" });
+      return res
+        .status(401)
+        .send({ response: "please sign in to your account" });
     }
     const user = jwt.verify(token, process.env.EMAILPASS);
     req.user = user.userEmail;

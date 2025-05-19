@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { createAccount, getUser } = require("../../Model/User/User");
-const { addClient } = require("../../controller/controls/add");
+const { addClient, findClient } = require("../../controller/controls/add");
 const { useAppSettings } = require("../../controller");
 const { config } = require("dotenv");
 config();
@@ -21,6 +21,7 @@ exports.signUp = async (req, res) => {
     email: email.toLowerCase(),
     password: hashedPassword,
   };
+
   try {
     let isAnExistingUser = await getUser(email);
     if (!isAnExistingUser) {
@@ -45,6 +46,7 @@ exports.signIn = async (req, res) => {
   try {
     const user = await getUser(email.toLowerCase());
     if (!user) {
+      // @dev if not  registered user return status 404
       return res.status(404).send({ response: "Account not found" });
     }
     if (user) {
@@ -55,13 +57,14 @@ exports.signIn = async (req, res) => {
       if (passwordMatch) {
         const { email } = user; //
         const token = jwt.sign({ userEmail: email }, process.env.EMAILPASS, {
-          expiresIn: "5h",
+          expiresIn: "60m",
         });
         return res.status(200).send({
           response: `Welcome back ${email}`,
           token: encodeURIComponent(token),
         });
       } else {
+        // return status 403 if password doesn't match
         res.status(403).send({ response: "Incorrect password" });
       }
     }
@@ -90,8 +93,13 @@ exports.userAccount = async (req, res) => {
 exports.addNewClient = async (req, res) => {
   const userEmail = req.user;
   const client = req.body;
+  const { email } = client;
 
   try {
+    const isExisting = await findClient(userEmail, email);
+    if (isExisting) {
+      return res.status(403).send({ response: "client already exist" });
+    }
     const response = await addClient(userEmail, client);
 
     return (
@@ -119,3 +127,6 @@ exports.accountSettings = async (req, res) => {
     res.status(500).send({ reponse: "Operation failed try again" });
   }
 };
+
+
+

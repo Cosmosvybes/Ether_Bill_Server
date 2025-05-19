@@ -10,7 +10,7 @@ exports.onSubscription = async (req, res, next) => {
       //
     } else if (hasLowToken && account.freemiumInvoiceCount == 0) {
       return res.status(403).send({
-        response: "token not enough to send invoice, add some token."
+        response: "token not enough to send invoice, add some token.",
       });
     } else {
       return next();

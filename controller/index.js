@@ -2,7 +2,7 @@ const { getUser } = require("../Model/User/User");
 const { users } = require("../utils/Mongo/collection/collection");
 const { mailer } = require("../utils/Nodemailer/Mailer");
 const { addSentInvoice } = require("./controls/add");
-const { findInvoice, findSentInvoice } = require("./controls/get");
+const { findSentInvoice } = require("./controls/get");
 
 exports.useAppSendInvoice = async (
   user_,

@@ -23,7 +23,7 @@ router.post("/new/invoice", Auth, draftInvoice);
 router.get("/user/", Auth, userAccount);
 router.get("/invoice", Auth, getInvoice);
 router.patch("/invoice/mark-as-paid", Auth, markAsPaid);
-router.post("/send/invoice", Auth, onSubscription, sendInvoice);
+router.post("/send/invoice", Auth, sendInvoice);
 
 router.put("/invoice/updates", Auth, updateInvoice);
 router.get("/dashboard", Auth, Proceed);
