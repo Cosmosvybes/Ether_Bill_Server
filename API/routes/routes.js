@@ -5,9 +5,12 @@ const {
   userAccount,
   addNewClient,
   accountSettings,
+  resetPasswordCode,
+  verifyCode,
+  updatePassword,
 } = require("../Endpoints/account");
 const { Auth } = require("../../middleware/auth/Auth");
-const { onSubscription } = require("../../middleware/auth/subscriptionAuth");
+// const { onSubscription } = require("../../middleware/auth/subscriptionAuth");
 const {
   sendInvoice,
   draftInvoice,
@@ -28,10 +31,12 @@ router.post("/send/invoice", Auth, sendInvoice);
 router.put("/invoice/updates", Auth, updateInvoice);
 router.get("/dashboard", Auth, Proceed);
 router.post("/sign-in", signIn);
-router.post("/sign-up", signUp);
+router.post("/create_account", signUp);
 
 router.delete("/invoice/delete", Auth, deleteInvoice);
 router.post("/client/new", Auth, addNewClient);
 router.post("/account/settings", Auth, accountSettings);
-
+router.post("/reset-password", resetPasswordCode);
+router.post("/verify_code", verifyCode);
+router.post("/update_password", updatePassword);
 exports.routes = router;

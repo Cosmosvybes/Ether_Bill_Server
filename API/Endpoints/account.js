@@ -4,26 +4,29 @@ const { createAccount, getUser } = require("../../Model/User/User");
 const { addClient, findClient } = require("../../controller/controls/add");
 const { useAppSettings } = require("../../controller");
 const { config } = require("dotenv");
+const Mail = require("nodemailer/lib/mailer");
+const { mailer } = require("../../utils/Nodemailer/Mailer");
+const { users } = require("../../utils/Mongo/collection/collection");
 config();
 //?? //////////////////////////////////////////////////////////
 //  SIGN UP
 //?? //////////////////////////////////////////////////////////
 
 exports.signUp = async (req, res) => {
-  const { firstname, lastname, email, password } = req.body;
+  const { Firstname, Lastname, Email, Password } = req.body;
+  console.log(req.body);
   const saltRound = 10;
-  let hashedPassword = await bcrypt.hash(password, saltRound);
+  // let hashedPassword = await bcrypt.hash(Password, saltRound);
 
   //
   const user = {
-    firstname: firstname.toLowerCase(),
-    lastname: lastname.toLowerCase(),
-    email: email.toLowerCase(),
-    password: hashedPassword,
+    firstname: Firstname.toLowerCase(),
+    lastname: Lastname.toLowerCase(),
+    email: Email.toLowerCase(),
+    password: Password,
   };
-
   try {
-    let isAnExistingUser = await getUser(email);
+    let isAnExistingUser = await getUser(Email);
     if (!isAnExistingUser) {
       const { insertedId } = await createAccount(user);
       return insertedId
@@ -42,19 +45,21 @@ exports.signUp = async (req, res) => {
 //  SIGN IN
 //?? //////////////////////////////////////////////////////////
 exports.signIn = async (req, res) => {
-  const { email, password } = req.query;
+  const { email, password } = req.body;
   try {
     const user = await getUser(email.toLowerCase());
     if (!user) {
       // @dev if not  registered user return status 404
       return res.status(404).send({ response: "Account not found" });
     }
+    // console.log(password, user.password);
     if (user) {
-      const passwordMatch = await bcrypt.compare(
-        password.toLowerCase(),
-        user.password
-      );
-      if (passwordMatch) {
+      // const passwordMatch = await bcrypt.compare(
+      //   password.toLowerCase(),
+      //   user.password
+      // );
+
+      if (user.password.toLowerCase() == password.toLowerCase()) {
         const { email } = user; //
         const token = jwt.sign({ userEmail: email }, process.env.EMAILPASS, {
           expiresIn: "60m",
@@ -128,5 +133,81 @@ exports.accountSettings = async (req, res) => {
   }
 };
 
+//?? //////////////////////////////////////////////////////////
+// FORGOT PASSWORD
+//?? //////////////////////////////////////////////////////////
 
+exports.resetPasswordCode = async (req, res) => {
+  const { email, emailInstance, verificationCode } = req.body;
 
+  try {
+    const user = await getUser(email.toLowerCase());
+    if (!user) return res.status(403).send({ response: "User not found" });
+
+    const response = await mailer(
+      "PASSWORD RESET",
+      email.toLowerCase(),
+      emailInstance
+    );
+    await updateVerificationCode(email, verificationCode);
+    if (response)
+      res.status(200).send({ message: `Verication code sent to ${email}` });
+  } catch (error) {
+    res.status(500).send({ reponse: "Operation failed try again" });
+  }
+};
+
+async function updateVerificationCode(email, code) {
+  try {
+    await users.updateOne({ email: email }, { $set: { code } });
+  } catch (error) {
+    throw new Error("Error occured");
+  }
+}
+
+async function verifyCode(email, code) {
+  try {
+    const user = await getUser(email.toLowerCase());
+    const verificationCode = Number(user.code);
+    const isValidCode = verificationCode == code;
+    return isValidCode;
+  } catch (error) {
+    throw new Error("Error occured");
+  }
+}
+
+async function updatePassword(email, newPassword) {
+  try {
+    const response = await users.updateOne(
+      { email },
+      { $set: { password: newPassword } }
+    );
+    return response;
+  } catch (error) {
+    throw new Error("Error occured");
+  }
+}
+
+exports.verifyCode = async (req, res) => {
+  const { userEmail, code } = req.body;
+  try {
+    const isValid = await verifyCode(userEmail, code);
+    if (!isValid)
+      return res.status(403).send({ response: "Code does not match" });
+    return res.status(200).send({ message: "success" });
+  } catch (error) {
+    res.status(500).send({ reponse: "Internal failed try again" });
+  }
+};
+
+exports.updatePassword = async (req, res) => {
+  const { userEmail, newPassword } = req.body;
+  try {
+    const response = await updatePassword(userEmail, newPassword);
+    if (!response.modifiedCount)
+      return res.status(503).send({ message: "Operation failed, try again" });
+    return res.status(200).send({ message: "password successfully updated" });
+  } catch (error) {
+    res.status(500).send({ reponse: "Interna server error" });
+  }
+};

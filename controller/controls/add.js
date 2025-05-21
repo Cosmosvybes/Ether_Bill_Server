@@ -34,3 +34,5 @@ exports.findClient = async (user, email) => {
   const client = account.clients.find((client) => client.email == email);
   return client;
 };
+
+
