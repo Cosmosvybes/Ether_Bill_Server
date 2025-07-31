@@ -1,13 +1,15 @@
-const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { createAccount, getUser } = require("../../Model/User/User");
 const { addClient, findClient } = require("../../controller/controls/add");
 const { useAppSettings } = require("../../controller");
 const { config } = require("dotenv");
-const Mail = require("nodemailer/lib/mailer");
+// const Mail = require("nodemailer/lib/mailer");
 const { mailer } = require("../../utils/Nodemailer/Mailer");
 const { users } = require("../../utils/Mongo/collection/collection");
+const  pinataSdk = require("@pinata/sdk");
+const { default: PinataClient } = require("@pinata/sdk");
 config();
+
 //?? //////////////////////////////////////////////////////////
 //  SIGN UP
 //?? //////////////////////////////////////////////////////////
@@ -208,6 +210,8 @@ exports.updatePassword = async (req, res) => {
       return res.status(503).send({ message: "Operation failed, try again" });
     return res.status(200).send({ message: "password successfully updated" });
   } catch (error) {
-    res.status(500).send({ reponse: "Interna server error" });
+    res.status(500).send({ reponse: "Internal server error" });
   }
 };
+
+

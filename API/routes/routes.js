@@ -20,8 +20,12 @@ const {
   markAsPaid,
 } = require("../Endpoints/invoicing");
 const { Proceed } = require("../Endpoints/proceed");
+const {
+  getUploadedEscrowDocs,
+  uploadEscrowDealDocs,
+} = require("../Endpoints/escrow");
 
-let router = express.Router();
+let router = express.Router(); // Router is an express package method that allows us to define our APi endpoints.
 router.post("/new/invoice", Auth, draftInvoice);
 router.get("/user/", Auth, userAccount);
 router.get("/invoice", Auth, getInvoice);
@@ -39,4 +43,6 @@ router.post("/account/settings", Auth, accountSettings);
 router.post("/reset-password", resetPasswordCode);
 router.post("/verify_code", verifyCode);
 router.post("/update_password", updatePassword);
+router.get("/escrow_proofs/", Auth, getUploadedEscrowDocs);
+router.post("/upload/escrow_docs", Auth, uploadEscrowDealDocs);
 exports.routes = router;
