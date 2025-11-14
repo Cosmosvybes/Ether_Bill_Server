@@ -25,7 +25,7 @@ const {
   getUploadedEscrowDocs,
   uploadEscrowDealDocs,
 } = require("../Endpoints/escrow");
-const { getAccessCode } = require("../../services/paystack!");
+const { getAccessCode } = require("../../services/paystack");
 
 let router = express.Router(); // Router is an express package method that allows us to define our APi endpoints.
 router.post("/new/invoice", Auth, draftInvoice);
