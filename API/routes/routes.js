@@ -1,4 +1,5 @@
 const express = require("express");
+const { onSubscription } = require("../../middleware/auth/onSubscription");
 const {
   signIn,
   signUp,
@@ -24,13 +25,14 @@ const {
   getUploadedEscrowDocs,
   uploadEscrowDealDocs,
 } = require("../Endpoints/escrow");
+const { getAccessCode } = require("../../services/Paystack");
 
 let router = express.Router(); // Router is an express package method that allows us to define our APi endpoints.
 router.post("/new/invoice", Auth, draftInvoice);
 router.get("/user/", Auth, userAccount);
 router.get("/invoice", Auth, getInvoice);
 router.patch("/invoice/mark-as-paid", Auth, markAsPaid);
-router.post("/send/invoice", Auth, sendInvoice);
+router.post("/send/invoice", Auth, onSubscription, sendInvoice);
 
 router.put("/invoice/updates", Auth, updateInvoice);
 router.get("/dashboard", Auth, Proceed);
@@ -38,11 +40,12 @@ router.post("/sign-in", signIn);
 router.post("/create_account", signUp);
 
 router.delete("/invoice/delete", Auth, deleteInvoice);
-router.post("/client/new", Auth, addNewClient);
+router.post("/client/new", Auth, onSubscription, addNewClient);
 router.post("/account/settings", Auth, accountSettings);
 router.post("/reset-password", resetPasswordCode);
 router.post("/verify_code", verifyCode);
 router.post("/update_password", updatePassword);
 router.get("/escrow_proofs/", Auth, getUploadedEscrowDocs);
 router.post("/upload/escrow_docs", Auth, uploadEscrowDealDocs);
+router.post("/one/time/payment", getAccessCode);
 exports.routes = router;

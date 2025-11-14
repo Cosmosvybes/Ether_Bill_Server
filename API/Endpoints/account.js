@@ -6,8 +6,6 @@ const { config } = require("dotenv");
 // const Mail = require("nodemailer/lib/mailer");
 const { mailer } = require("../../utils/Nodemailer/Mailer");
 const { users } = require("../../utils/Mongo/collection/collection");
-const  pinataSdk = require("@pinata/sdk");
-const { default: PinataClient } = require("@pinata/sdk");
 config();
 
 //?? //////////////////////////////////////////////////////////
@@ -213,5 +211,3 @@ exports.updatePassword = async (req, res) => {
     res.status(500).send({ reponse: "Internal server error" });
   }
 };
-
-

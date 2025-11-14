@@ -4,6 +4,7 @@ exports.createAccount = async (user) => {
   const result = await users.insertOne({
     ...user,
     draft: [],
+    isSubscribed: false,
     sent: [],
     revenue: 0,
     clients: [],
@@ -11,7 +12,7 @@ exports.createAccount = async (user) => {
     paid: [],
     overdue: [],
     id: Date.now(),
-    freemiumInvoiceCount: 0,
+    freemiumInvoiceCount: 3,
     token: 0,
     settings: {
       defaultCurrency: "",
