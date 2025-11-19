@@ -14,8 +14,7 @@ config();
 
 exports.signUp = async (req, res) => {
   const { Firstname, Lastname, Email, Password } = req.body;
-  console.log(req.body);
-  const saltRound = 10;
+  // const saltRound = 10;
   // let hashedPassword = await bcrypt.hash(Password, saltRound);
 
   //
@@ -25,12 +24,13 @@ exports.signUp = async (req, res) => {
     email: Email.toLowerCase(),
     password: Password,
   };
+
   try {
     let isAnExistingUser = await getUser(Email);
     if (!isAnExistingUser) {
       const { insertedId } = await createAccount(user);
       return insertedId
-        ? res.status(200).send({ response: "Account succesfully created" })
+        ? res.status(200).send({ response: "Account successfully created" })
         : res.status(503).send({ response: "Something went wrong" });
     }
     res
@@ -196,7 +196,7 @@ exports.verifyCode = async (req, res) => {
       return res.status(403).send({ response: "Code does not match" });
     return res.status(200).send({ message: "success" });
   } catch (error) {
-    res.status(500).send({ reponse: "Internal failed try again" });
+    res.status(500).send({ reponse: "Internal sever error, try again" });
   }
 };
 

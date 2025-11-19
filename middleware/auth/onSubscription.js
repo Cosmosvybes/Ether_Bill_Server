@@ -11,7 +11,7 @@ async function onSubscrbibed(req, res, next) {
         return res.status(403).send({
           res: "Make your one time subscription, to start sending invoices",
         });
-    } catch (error) {
+    } catch (error) {``
       res.status(500).send({ res: "Internal server error" });
     }
 }

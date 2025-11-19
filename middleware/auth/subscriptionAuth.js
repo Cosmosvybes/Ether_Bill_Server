@@ -5,7 +5,7 @@ exports.onSubscription = async (req, res, next) => {
   try {
     let account = await getUser(_email);
     let hasLowToken = account.token < 100;
-    if (account.token == 0 && account.freemiumInvoiceCount == 0) {
+    if (account.isSubscribed || account.freemiumInvoiceCount != 0) {
       res.status(403).send({ response: "You are currently not subscribed" });
       //
     } else if (hasLowToken && account.freemiumInvoiceCount == 0) {
