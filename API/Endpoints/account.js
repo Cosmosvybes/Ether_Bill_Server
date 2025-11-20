@@ -142,7 +142,7 @@ exports.resetPasswordCode = async (req, res) => {
 
   try {
     const user = await getUser(email.toLowerCase());
-    if (!user) return res.status(403).send({ response: "User not found" });
+    if (!user) return res.status(404).send({ response: "User not found" });
 
     const response = await mailer(
       "PASSWORD RESET",

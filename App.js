@@ -21,7 +21,7 @@ app.use(
 app.use(requestLogger());
 app.use("/api", routes);
 
-// serverClusterer();
+serverClusterer();
 
 app.listen(PORT, () =>
   console.log(`Server instantiated on Worker  ${process.pid}`)
