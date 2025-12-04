@@ -45,7 +45,7 @@ router.post("/send/invoice", Auth, onSubscription, sendInvoice);
 
 router.put("/invoice/updates", Auth, updateInvoice);
 router.get("/dashboard", Auth, Proceed);
-router.post("/sign-in", limiter, signIn);
+router.post("/sign-in", signIn);
 router.post("/create_account", signUp);
 
 router.delete("/invoice/delete", Auth, deleteInvoice);
