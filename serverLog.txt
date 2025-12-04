@@ -120,4 +120,8 @@ new Client request 21, 12
  new Client request 19, 38
  new Client request 19, 38
  new Client request 19, 39
+ new Client request 20, 38
+ new Client request 20, 39
+ new Client request 20, 42
+ new Client request 4, 27
  

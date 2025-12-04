@@ -10,7 +10,7 @@ const {
   verifyCode,
   updatePassword,
 } = require("../Endpoints/account");
-const { Auth } = require("../../middleware/auth/Auth");
+const rateLimiter = require("express-rate-limit");
 // const { onSubscription } = require("../../middleware/auth/subscriptionAuth");
 const {
   sendInvoice,
@@ -26,8 +26,17 @@ const {
   uploadEscrowDealDocs,
 } = require("../Endpoints/escrow");
 const { getAccessCode } = require("../../services/paystack");
-
+const { Auth } = require("./../../middleware/auth/Auth");
 let router = express.Router(); // Router is an express package method that allows us to define our APi endpoints.
+
+const limiter = rateLimiter({
+  windowMs: 5 * 60 * 1000,
+  limit: 2,
+  handler: (req, res) => {
+    res.status(429).send({ res: "Try again in the next 5 mins" });
+  },
+});
+
 router.post("/new/invoice", Auth, draftInvoice);
 router.get("/user/", Auth, userAccount);
 router.get("/invoice", Auth, getInvoice);
@@ -36,7 +45,7 @@ router.post("/send/invoice", Auth, onSubscription, sendInvoice);
 
 router.put("/invoice/updates", Auth, updateInvoice);
 router.get("/dashboard", Auth, Proceed);
-router.post("/sign-in", signIn); 
+router.post("/sign-in", limiter, signIn);
 router.post("/create_account", signUp);
 
 router.delete("/invoice/delete", Auth, deleteInvoice);

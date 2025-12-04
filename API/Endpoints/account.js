@@ -203,11 +203,11 @@ exports.verifyCode = async (req, res) => {
 exports.updatePassword = async (req, res) => {
   const { userEmail, newPassword } = req.body;
   try {
-    const response = await updatePassword(userEmail, newPassword);
-    if (!response.modifiedCount)
-      return res.status(503).send({ message: "Operation failed, try again" });
+    const { modifiedCount } = await updatePassword(userEmail, newPassword);
+    if (modifiedCount)
+      return res.status(503).send({ message: "Operation failed, try again!" });
     return res.status(200).send({ message: "password successfully updated" });
   } catch (error) {
-    res.status(500).send({ reponse: "Internal server error" });
+    res.status(500).send({ reponse: "Internal server error, try again!" });
   }
 };
