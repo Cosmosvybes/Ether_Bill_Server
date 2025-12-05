@@ -10,7 +10,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(json());
 
 // app use cors
-app.options("*", cors({ origin: "*" }));
+// app.options("/*", cors());
 app.use(
   cors({
     origin: "*", // prod: "https://invoicelogger.netlify.app"
