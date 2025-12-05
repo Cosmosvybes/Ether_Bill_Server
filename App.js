@@ -13,7 +13,7 @@ app.use(json());
 app.options("*", cors({ origin: "*" }));
 app.use(
   cors({
-    origin: "https://invoicelogger.netlify.app", // prod: "https://invoicelogger.netlify.app"
+    origin: "*", // prod: "https://invoicelogger.netlify.app"
     credentials: true,
     optionsSuccessStatus: 200,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
