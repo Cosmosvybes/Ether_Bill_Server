@@ -4,7 +4,7 @@ const cors = require("cors");
 const { routes } = require("./API/routes/routes");
 const app = express();
 
-const { serverClusterer, requestLogger } = require("./_helper/cluster");
+const { requestLogger } = require("./_helper/cluster");
 const PORT = process.env.PORT || 8080;
 app.use(express.urlencoded({ extended: false }));
 app.use(json());
@@ -21,7 +21,7 @@ app.use(
 app.use(requestLogger());
 app.use("/api", routes);
 
-serverClusterer();
+// serverClusterer();
 
 app.listen(PORT, () =>
   console.log(`Server instantiated on Worker  ${process.pid}`)
