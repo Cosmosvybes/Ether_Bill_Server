@@ -9,11 +9,9 @@ const PORT = process.env.PORT || 8080;
 app.use(express.urlencoded({ extended: false }));
 app.use(json());
 
-// app use cors
-// app.options("/*", cors());
 app.use(
   cors({
-    origin: "*", // prod: "https://invoicelogger.netlify.app"
+    origin: "https://invoicelogger.netlify.app", // prod: "https://invoicelogger.netlify.app"
     credentials: true,
     optionsSuccessStatus: 200,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
