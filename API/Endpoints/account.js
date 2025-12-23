@@ -150,8 +150,15 @@ exports.resetPasswordCode = async (req, res) => {
       emailInstance
     );
     await updateVerificationCode(email, verificationCode);
-    if (response)
-      res.status(200).send({ message: `Verication code sent to ${email}` });
+    if (response) {
+      return res
+        .status(200)
+        .send({ message: `Verication code sent to ${email}` });
+    } else {
+      return res
+        .status(503)
+        .send({ response: "Failed to send verification code" });
+    }
   } catch (error) {
     res.status(500).send({ reponse: "Operation failed try again" });
   }
@@ -204,7 +211,7 @@ exports.updatePassword = async (req, res) => {
   const { userEmail, newPassword } = req.body;
   try {
     const { modifiedCount } = await updatePassword(userEmail, newPassword);
-    if (modifiedCount)
+    if (!modifiedCount)
       return res.status(503).send({ message: "Operation failed, try again!" });
     return res.status(200).send({ message: "password successfully updated" });
   } catch (error) {
