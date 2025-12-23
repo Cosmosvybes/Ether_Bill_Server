@@ -80,6 +80,20 @@ exports.markAsPaid = async (req, res) => {
   try {
     const response = await addRevenue(email, invoiceID);
     await paidUpdate(email, invoiceID);
+
+    // [NEW] Revenue Notification Logic
+    const { getUser } = require("../../Model/User/User");
+    const { mailer } = require("../../utils/Nodemailer/Mailer");
+    const user = await getUser(email);
+
+    if (user.settings && (user.settings.revenueNotification || user.settings.paymentRecieivedNotification)) {
+      await mailer(
+        "💰 Payment Received! Cha-ching!",
+        user.email,
+        `<h1>Great news!</h1><p>You have received a payment for Invoice #${invoiceID}.</p><p>Keep up the great work!</p>`
+      );
+    }
+
     return (
       response &&
       res
@@ -88,5 +102,31 @@ exports.markAsPaid = async (req, res) => {
     );
   } catch (error) {
     res.status(503).send({ response: "Service unavailbale, try again" });
+  }
+};
+
+exports.getRecurring = async (req, res) => {
+  const email = req.user;
+  const { getRecurringInvoices } = require("../../controller/controls/get");
+  try {
+    const recurringList = await getRecurringInvoices(email);
+    res.status(200).send({ response: recurringList });
+  } catch (error) {
+    res.status(503).send({ response: "Service unavailable, try again" });
+  }
+};
+
+exports.deleteRecurring = async (req, res) => {
+  const { id } = req.query;
+  const email = req.user;
+  const { removeRecurringInvoice } = require("../../controller/controls/delete");
+  try {
+    const response = await removeRecurringInvoice(email, id);
+    return (
+      response.modifiedCount &&
+      res.status(200).send({ response: "Recurring profile deleted" })
+    );
+  } catch (error) {
+    res.status(503).send({ response: "Service unavailable, try again" });
   }
 };

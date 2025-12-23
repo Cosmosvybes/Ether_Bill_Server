@@ -10,7 +10,9 @@ exports.createAccount = async (user) => {
     clients: [],
     inbox: [],
     paid: [],
+    paid: [],
     overdue: [],
+    recurring: [], // [NEW] Store recurring profiles
     id: Date.now(),
     freemiumInvoiceCount: 3,
     token: 0,
@@ -21,6 +23,10 @@ exports.createAccount = async (user) => {
       businessAddress: "",
       sharingToken: false,
       paymentRecieivedNotification: true,
+      revenueNotification: true, // [NEW] Match Frontend key
+      autoChase: false,
+      defaultPaymentTerms: false, // [NEW] 30 Days Default
+      applyTax: false, // [NEW] Apply Tax Default
       businessAddress: "",
       businessName: "",
     },

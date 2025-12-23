@@ -3,6 +3,10 @@ const { json } = require("express");
 const cors = require("cors");
 const { routes } = require("./API/routes/routes");
 const app = express();
+const initCronJobs = require("./cron"); // Import cron
+
+// Initialize Cron Jobs
+initCronJobs();
 
 const { requestLogger } = require("./_helper/cluster");
 const PORT = process.env.PORT || 8080;

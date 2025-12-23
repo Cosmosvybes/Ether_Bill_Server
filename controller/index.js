@@ -41,6 +41,25 @@ exports.useAppSendInvoice = async (
   );
 
   const sentRes = await addSentInvoice(user_, invoice);
+
+  // [NEW] Handle Recurring
+  if (invoice.recurring && invoice.recurring.frequency) {
+    // Calculate next run
+    const nextRun = new Date();
+    if (invoice.recurring.frequency === "weekly") nextRun.setDate(nextRun.getDate() + 7);
+    if (invoice.recurring.frequency === "monthly") nextRun.setMonth(nextRun.getMonth() + 1);
+
+    const recurringProfile = {
+      ...invoice,
+      recurring: {
+        ...invoice.recurring,
+        nextRun: nextRun
+      }
+    };
+    const { addRecurringInvoice } = require("./controls/add"); // late import to avoid circular dep if any (safe here)
+    await addRecurringInvoice(user_, recurringProfile);
+  }
+
   if (sendAsMessage) {
     await users.updateOne({ email: receipient }, { $push: { inbox: invoice } });
   }

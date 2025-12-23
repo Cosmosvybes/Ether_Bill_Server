@@ -10,3 +10,8 @@ exports.findSentInvoice = async (email, invoiceId) => {
   let invoice = user.sent.find((invoice) => invoice.id == String(invoiceId));
   return invoice;
 };
+
+exports.getRecurringInvoices = async (email) => {
+  const user = await getUser(email);
+  return user.recurring || [];
+};

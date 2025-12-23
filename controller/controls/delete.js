@@ -10,3 +10,11 @@ exports.deleteDoc = async (id, user_) => {
   );
   return response;
 };
+
+exports.removeRecurringInvoice = async (userEmail, invoiceId) => {
+  const response = await users.updateOne(
+    { email: userEmail },
+    { $pull: { recurring: { id: String(invoiceId) } } }
+  );
+  return response;
+};

@@ -19,6 +19,8 @@ const {
   deleteInvoice,
   getInvoice,
   markAsPaid,
+  getRecurring,
+  deleteRecurring,
 } = require("../Endpoints/invoicing");
 const { Proceed } = require("../Endpoints/proceed");
 const {
@@ -57,4 +59,9 @@ router.post("/update_password", updatePassword);
 router.get("/escrow_proofs/", Auth, getUploadedEscrowDocs);
 router.post("/upload/escrow_docs", Auth, uploadEscrowDealDocs);
 router.post("/one/time/payment", getAccessCode);
+
+// Recurring Routes
+router.get("/invoice/recurring", Auth, getRecurring);
+router.delete("/invoice/recurring", Auth, deleteRecurring);
+
 exports.routes = router;

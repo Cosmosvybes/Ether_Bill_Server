@@ -35,4 +35,12 @@ exports.findClient = async (user, email) => {
   return client;
 };
 
+exports.addRecurringInvoice = async (user, invoice) => {
+  const response = await users.updateOne(
+    { email: user },
+    { $push: { recurring: { ...invoice } } }
+  );
+  return response.modifiedCount;
+};
+
 
