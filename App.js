@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 8080;
 app.use(express.urlencoded({ extended: false }));
 app.use(
   cors({
-    origin: "http://localhost:5173", // prod: "https://invoicelogger.netlify.app"
+    origin: ["http://localhost:5173", "https://invoicelogger.netlify.app"],
     optionsSuccessStatus: 200,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
