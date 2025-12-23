@@ -1,24 +1,30 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const { config } = require("dotenv");
 config();
-const transport = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.EMAILPASS,
-  },
-});
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 exports.mailer = async (_subject, receipient, _mail) => {
+  const keyStatus = process.env.RESEND_API_KEY ? "Loaded" : "Missing";
+  console.log(`[Scaler] Sending email to ${receipient}. Key: ${keyStatus}`);
+
   try {
-    const info = await transport.sendMail({
-      from: '"Etherbill Inc. " <etherbill.suppport@gmail.com>',
-      to: receipient,
+    const { data, error } = await resend.emails.send({
+      from: "EtherBill <onboarding@resend.dev>",
+      to: [receipient],
       subject: _subject,
       html: _mail,
     });
-    return info.messageId;
+
+    if (error) {
+      console.error("Resend Error Result:", error);
+      return null;
+    }
+
+    console.log("Email Sent Successfully! ID:", data.id);
+    return data.id;
   } catch (error) {
-    console.log(error);
+    console.error("Email Service Exception:", error);
+    return null;
   }
 };

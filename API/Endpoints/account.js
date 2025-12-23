@@ -139,9 +139,11 @@ exports.accountSettings = async (req, res) => {
 
 exports.resetPasswordCode = async (req, res) => {
   const { email, emailInstance, verificationCode } = req.body;
+  console.log("Reset Password Request:", { email, hasHtml: !!emailInstance, code: verificationCode });
 
   try {
     const user = await getUser(email.toLowerCase());
+    console.log("User Lookup Result:", user ? "Found" : "Not Found");
     if (!user) return res.status(404).send({ response: "User not found" });
 
     const response = await mailer(
@@ -175,7 +177,12 @@ async function updateVerificationCode(email, code) {
 async function verifyCode(email, code) {
   try {
     const user = await getUser(email.toLowerCase());
+    if (!user) {
+      console.log("Verify: User not found");
+      return false;
+    }
     const verificationCode = Number(user.code);
+    console.log(`Verifying: DB=${verificationCode} vs Input=${code}`);
     const isValidCode = verificationCode == code;
     return isValidCode;
   } catch (error) {
@@ -196,24 +203,54 @@ async function updatePassword(email, newPassword) {
 }
 
 exports.verifyCode = async (req, res) => {
-  const { userEmail, code } = req.body;
+  const { userEmail, email, code } = req.body; // Check for both
+  const targetEmail = userEmail || email; // Fallback
+  console.log("Verify Code Request:", { targetEmail, code, body: req.body });
+
   try {
-    const isValid = await verifyCode(userEmail, code);
+    if (!targetEmail) return res.status(400).send({ response: "Email is missing" });
+
+    const isValid = await verifyCode(targetEmail, code);
+    console.log("Verification Result:", isValid);
+
     if (!isValid)
       return res.status(403).send({ response: "Code does not match" });
     return res.status(200).send({ message: "success" });
   } catch (error) {
+    console.error("Verify Error:", error);
     res.status(500).send({ reponse: "Internal sever error, try again" });
   }
 };
 
 exports.updatePassword = async (req, res) => {
-  const { userEmail, newPassword } = req.body;
+  const { userEmail, email, newPassword } = req.body; // Support both
+  const rawEmail = userEmail || email;
+
+  if (!rawEmail) return res.status(400).send({ message: "Email is missing" });
+
+  const targetEmail = rawEmail.toLowerCase();
+  console.log("Update Password Request:", { targetEmail, newPasswordProvided: !!newPassword });
+
   try {
-    const { modifiedCount } = await updatePassword(userEmail, newPassword);
-    if (!modifiedCount)
-      return res.status(503).send({ message: "Operation failed, try again!" });
-    return res.status(200).send({ message: "password successfully updated" });
+    const result = await updatePassword(targetEmail, newPassword);
+    const { modifiedCount, matchedCount } = result;
+
+    console.log("Password Update Result:", { matchedCount, modifiedCount });
+
+    if (matchedCount === 0) {
+      return res.status(404).send({ message: "User not found during password update" });
+    }
+
+    if (modifiedCount === 0 && matchedCount === 1) {
+      // User found but password unchanged
+      return res.status(200).send({ message: "New password is same as current password (No change)" });
+    }
+
+    if (modifiedCount > 0) {
+      return res.status(200).send({ message: "password successfully updated" });
+    }
+
+    return res.status(503).send({ message: "Operation failed, try again!" });
   } catch (error) {
     res.status(500).send({ reponse: "Internal server error, try again!" });
   }
