@@ -254,3 +254,36 @@ exports.updatePassword = async (req, res) => {
     res.status(500).send({ reponse: "Internal server error, try again!" });
   }
 };
+exports.upgradeUserSubscription = async (req, res) => {
+  const email = req.user;
+  const { planType } = req.body; // 'monthly' or 'yearly'
+
+  try {
+    let expiryDate = new Date();
+    if (planType === 'yearly') {
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    } else {
+      // Default to monthly
+      expiryDate.setMonth(expiryDate.getMonth() + 1);
+    }
+
+    const response = await users.updateOne(
+      { email },
+      {
+        $set: {
+          isSubscribed: true,
+          subscriptionExpiry: expiryDate.toISOString(),
+          planType: planType || 'monthly'
+        }
+      }
+    );
+
+    if (response.modifiedCount > 0 || response.matchedCount > 0) {
+      return res.status(200).send({ response: "User upgraded to PRO successfully" });
+    }
+    return res.status(404).send({ response: "User not found" });
+  } catch (error) {
+    console.error("Upgrade Error:", error);
+    res.status(500).send({ response: "Internal server error" });
+  }
+};

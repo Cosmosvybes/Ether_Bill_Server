@@ -8,7 +8,9 @@ const {
   accountSettings,
   resetPasswordCode,
   verifyCode,
+  verifyCode,
   updatePassword,
+  upgradeUserSubscription,
 } = require("../Endpoints/account");
 const rateLimiter = require("express-rate-limit");
 // const { onSubscription } = require("../../middleware/auth/subscriptionAuth");
@@ -56,6 +58,7 @@ router.post("/account/settings", Auth, accountSettings);
 router.post("/reset-password", resetPasswordCode);
 router.post("/verify_code", verifyCode);
 router.post("/update_password", updatePassword);
+router.post("/subscription/upgrade", Auth, upgradeUserSubscription);
 router.get("/escrow_proofs/", Auth, getUploadedEscrowDocs);
 router.post("/upload/escrow_docs", Auth, uploadEscrowDealDocs);
 router.post("/paystack/init", Auth, getAccessCode);
