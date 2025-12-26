@@ -1,6 +1,6 @@
 const { getUser } = require("../Model/User/User");
 const { users } = require("../utils/Mongo/collection/collection");
-const { mailer } = require("../utils/Nodemailer/Mailer");
+const { mailer } = require("../utils/EmailService/Mailer");
 const { addSentInvoice } = require("./controls/add");
 const { findSentInvoice } = require("./controls/get");
 

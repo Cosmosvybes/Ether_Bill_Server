@@ -1,6 +1,6 @@
 const cron = require("node-cron");
 const { users } = require("../utils/Mongo/collection/collection");
-const { mailer } = require("../utils/Nodemailer/Mailer");
+const { mailer } = require("../utils/EmailService/Mailer");
 
 exports.checkOverdueInvoices = async () => {
     console.log("Running Auto-Chasing Job...");

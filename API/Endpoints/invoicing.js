@@ -83,7 +83,7 @@ exports.markAsPaid = async (req, res) => {
 
     // [NEW] Revenue Notification Logic
     const { getUser } = require("../../Model/User/User");
-    const { mailer } = require("../../utils/Nodemailer/Mailer");
+    const { mailer } = require("../../utils/EmailService/Mailer");
     const user = await getUser(email);
 
     if (user.settings && (user.settings.revenueNotification || user.settings.paymentRecieivedNotification)) {

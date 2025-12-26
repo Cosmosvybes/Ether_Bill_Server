@@ -3,8 +3,7 @@ const { createAccount, getUser } = require("../../Model/User/User");
 const { addClient, findClient } = require("../../controller/controls/add");
 const { useAppSettings } = require("../../controller");
 const { config } = require("dotenv");
-// const Mail = require("nodemailer/lib/mailer");
-const { mailer } = require("../../utils/Nodemailer/Mailer");
+const { mailer } = require("../../utils/EmailService/Mailer");
 const { users } = require("../../utils/Mongo/collection/collection");
 config();
 
