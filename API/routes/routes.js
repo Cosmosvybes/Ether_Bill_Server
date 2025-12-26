@@ -59,7 +59,7 @@ router.post("/update_password", updatePassword);
 router.get("/escrow_proofs/", Auth, getUploadedEscrowDocs);
 router.post("/upload/escrow_docs", Auth, uploadEscrowDealDocs);
 router.post("/paystack/init", Auth, getAccessCode);
-router.post("/webhooks/paddle", handlePaddleWebhook); // [NEW] Paddle Webhook
+
 
 // Recurring Routes
 router.get("/invoice/recurring", Auth, getRecurring);
