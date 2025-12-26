@@ -8,7 +8,6 @@ const {
   accountSettings,
   resetPasswordCode,
   verifyCode,
-  verifyCode,
   updatePassword,
   upgradeUserSubscription,
 } = require("../Endpoints/account");
