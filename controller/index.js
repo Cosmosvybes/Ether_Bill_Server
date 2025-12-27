@@ -56,7 +56,7 @@ exports.useAppSendInvoice = async (
       ...invoice,
       recurring: {
         ...invoice.recurring,
-        nextRun: nextRun
+        nextRun: nextRun.toISOString()
       }
     };
     const { addRecurringInvoice } = require("./controls/add"); // late import to avoid circular dep if any (safe here)

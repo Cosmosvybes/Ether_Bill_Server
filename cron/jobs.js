@@ -1,49 +1,58 @@
-const cron = require("node-cron");
 const { users } = require("../utils/Mongo/collection/collection");
 const { mailer } = require("../utils/EmailService/Mailer");
+const { addSentInvoice } = require("../controller/controls/add");
 
+/**
+ * Job to check for overdue invoices and send reminders
+ * Runs daily at 9:00 AM
+ */
 exports.checkOverdueInvoices = async () => {
     console.log("Running Auto-Chasing Job...");
     try {
-        // 1. Fetch all users who have auto-chasing enabled (or all for now if enabled by default/UI)
-        // Assuming UI toggle maps to user.settings.autoChase
         const allUsers = await users.find({}).toArray();
 
         for (const user of allUsers) {
             if (!user.settings || !user.settings.autoChase) continue;
 
             const sentInvoices = user.sent || [];
-            const overdueInvoices = sentInvoices.filter((invoice) => {
-                // Check if unpaid and overdue
-                // Assuming invoice.status and invoice.dueDate exist
-                // Status might be "sent" or "Draft" or "Paid"
-                if (invoice.status === "Paid") return false;
+            const updatedSent = [];
+            let modified = false;
 
-                const dueDate = new Date(invoice.dueDate);
+            for (const invoice of sentInvoices) {
+                if (invoice.status === "Paid") {
+                    updatedSent.push(invoice);
+                    continue;
+                }
+
+                const dueDate = new Date(invoice.DateDue || invoice.dueDate);
                 const now = new Date();
 
-                // Check if due date has passed
-                return dueDate < now;
-            });
+                // If overdue
+                if (dueDate < now) {
+                    // SPAM PROTECTION: Don't chase more than once every 24 hours
+                    const lastChased = invoice.lastChased ? new Date(invoice.lastChased) : null;
+                    const hoursSinceLastChase = lastChased ? (now - lastChased) / (1000 * 60 * 60) : 24;
 
-            for (const invoice of overdueInvoices) {
-                // Prevent spamming: Check if we already chased recently?
-                // For MVP, we might just send it if it hasn't been chased TODAY.
-                // But the prompt implied simple "Auto-Chasing". 
-                // To be safe, let's assume we send a reminder. 
-                // Ideally we should mark it as chased.
+                    if (hoursSinceLastChase >= 23) {
+                        console.log(`Chasing invoice ${invoice.id} for user ${user.email}`);
 
-                // TODO: Add logic to prevent daily spam. For now, we will log it.
-                console.log(`Chasing invoice ${invoice.id} for user ${user.email}`);
+                        const recipientEmail = invoice.receipient?.email || invoice.receipient;
+                        if (recipientEmail) {
+                            await mailer(
+                                `⚠️ Overdue Payment Reminder: Invoice #${invoice.id}`,
+                                recipientEmail,
+                                createOverdueReminderEmail(invoice, user)
+                            );
+                            invoice.lastChased = now.toISOString();
+                            modified = true;
+                        }
+                    }
+                }
+                updatedSent.push(invoice);
+            }
 
-                const recipientEmail = invoice.receipient?.email || invoice.receipient; // Handle structure variation
-                if (!recipientEmail) continue;
-
-                await mailer(
-                    `Payment Reminder: Invoice #${invoice.id} is Overdue`,
-                    recipientEmail,
-                    createReminderEmail(invoice, user)
-                );
+            if (modified) {
+                await users.updateOne({ email: user.email }, { $set: { sent: updatedSent } });
             }
         }
     } catch (error) {
@@ -51,6 +60,10 @@ exports.checkOverdueInvoices = async () => {
     }
 };
 
+/**
+ * Job to process recurring profiles and generate new invoices
+ * Runs daily at 9:00 AM
+ */
 exports.processRecurringInvoices = async () => {
     console.log("Running Recurring Invoice Job...");
     try {
@@ -66,40 +79,44 @@ exports.processRecurringInvoices = async () => {
                 const now = new Date();
 
                 if (nextRun <= now) {
-                    // Generate NEW invoice
+                    // 1. Generate NEW invoice object
                     const newInvoice = { ...profile };
-                    newInvoice.id = Date.now().toString() + Math.floor(Math.random() * 1000); // Unique ID
-                    newInvoice.date = new Date().toISOString().split('T')[0];
-                    // Update due date? Assuming original due date was X days from creation
-                    // For MVP, just keeping original due date might be wrong.
-                    // Let's set due date to Today + 7 days for recurring
-                    const newDueDate = new Date();
-                    newDueDate.setDate(newDueDate.getDate() + 7);
-                    newInvoice.dueDate = newDueDate.toISOString().split('T')[0];
+                    delete newInvoice._id; // Ensure no ID collision if any
 
-                    console.log(`Generating user ${user.email} recurring invoice ${newInvoice.id}...`);
+                    newInvoice.id = Date.now().toString() + Math.floor(Math.random() * 1000);
+                    newInvoice.status = "sent";
+                    newInvoice.DateIssued = now.toISOString();
+                    newInvoice.updatedAt = now.toISOString();
 
-                    // Send Email
+                    // Set Due Date (Default to +7 days for recurring)
+                    const dueDate = new Date();
+                    dueDate.setDate(dueDate.getDate() + 7);
+                    newInvoice.DateDue = dueDate.toISOString();
+                    newInvoice.dueDate = newInvoice.DateDue; // Legacy support
+
+                    console.log(`Generating recurring invoice ${newInvoice.id} for ${user.email}...`);
+
+                    // 2. Send Professional Email
                     const recipientEmail = newInvoice.receipient?.email || newInvoice.receipient;
                     if (recipientEmail) {
-                        // We reuse the mailer directly or call a simplified version
                         await mailer(
-                            `Recurring Invoice #${newInvoice.id} 📩`,
+                            `New Invoice Available: #${newInvoice.id} from ${user.firstname || 'Etherbill User'}`,
                             recipientEmail,
-                            createReminderEmail(newInvoice, user) // Reusing reminder template or similar
+                            createRecurringNotificationEmail(newInvoice, user)
                         );
                     }
 
-                    // Add to Sent
-                    const { addSentInvoice } = require("../controller/controls/add");
+                    // 3. Save to database
                     await addSentInvoice(user.email, newInvoice);
 
-                    // Update parameters for next run
-                    const nextNextRun = new Date(now);
-                    if (profile.recurring.frequency === "weekly") nextNextRun.setDate(nextNextRun.getDate() + 7);
-                    if (profile.recurring.frequency === "monthly") nextNextRun.setMonth(nextNextRun.getMonth() + 1);
+                    // 4. Update next run date
+                    const nextNextRun = new Date(nextRun);
+                    const freq = profile.recurring.frequency.toLowerCase();
+                    if (freq === "weekly") nextNextRun.setDate(nextNextRun.getDate() + 7);
+                    else if (freq === "monthly") nextNextRun.setMonth(nextNextRun.getMonth() + 1);
+                    else nextNextRun.setFullYear(nextNextRun.getFullYear() + 100); // effectively disable if weird
 
-                    profile.recurring.nextRun = nextNextRun;
+                    profile.recurring.nextRun = nextNextRun.toISOString();
                     processedAny = true;
                 }
                 activeRecurring.push(profile);
@@ -114,16 +131,77 @@ exports.processRecurringInvoices = async () => {
     }
 };
 
-const createReminderEmail = (invoice, user) => {
+/**
+ * Professional Template for Overdue Reminders
+ */
+const createOverdueReminderEmail = (invoice, user) => {
+    const amount = Number(invoice.TOTAL || invoice.total || 0).toLocaleString();
+    const currency = invoice.currency || '$';
+    const business = user.settings?.businessName || `${user.firstname} ${user.lastname}`;
+
     return `
-    <div style="font-family: sans-serif;">
-      <h2>Payment Reminder</h2>
-      <p>Dear Customer,</p>
-      <p>This is a friendly reminder that invoice <strong>#${invoice.id}</strong> was due on ${invoice.dueDate}.</p>
-      <p>Amount Due: <strong>${invoice.currency || '$'}${invoice.total || invoice.TOTAL || 0}</strong></p>
-      <p>Please make payment as soon as possible.</p>
-      <p>Best regards,</p>
-      <p>${user.firstname} ${user.lastname}</p>
-    </div>
-  `;
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
+        <div style="background-color: #f8fafc; padding: 32px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+            <h2 style="color: #0f172a; margin: 0; font-size: 24px;">Payment Overdue</h2>
+            <p style="color: #64748b; margin-top: 8px;">Invoice #${invoice.id}</p>
+        </div>
+        <div style="padding: 32px; color: #334155; line-height: 1.6;">
+            <p>Hello,</p>
+            <p>This is a reminder that the payment for <strong>Invoice #${invoice.id}</strong> from <strong>${business}</strong> is now overdue.</p>
+            <div style="background-color: #f1f5f9; padding: 24px; border-radius: 12px; margin: 24px 0; text-align: center;">
+                <p style="margin: 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Amount Due</p>
+                <h1 style="margin: 8px 0 0 0; color: #0f172a; font-size: 32px;">${currency}${amount}</h1>
+            </div>
+            <p>To avoid any service interruptions, please settle this payment at your earliest convenience.</p>
+            <div style="text-align: center; margin-top: 32px;">
+                <a href="https://invoicelogger.netlify.app/public/invoice/${invoice.id}" style="background-color: #0f172a; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">View & Pay Invoice</a>
+            </div>
+        </div>
+        <div style="padding: 24px; background-color: #f8fafc; text-align: center; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0;">
+            <p>Sent via Etherbill &bull; Simple, professional invoicing.</p>
+        </div>
+    </div>`;
+};
+
+/**
+ * Professional Template for New Recurring Invoices
+ */
+const createRecurringNotificationEmail = (invoice, user) => {
+    const amount = Number(invoice.TOTAL || invoice.total || 0).toLocaleString();
+    const currency = invoice.currency || '$';
+    const business = user.settings?.businessName || `${user.firstname} ${user.lastname}`;
+
+    return `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
+        <div style="background-color: #f0fdf4; padding: 32px; text-align: center; border-bottom: 1px solid #dcfce7;">
+            <h2 style="color: #166534; margin: 0; font-size: 24px;">New Invoice Generated</h2>
+            <p style="color: #15803d; margin-top: 8px;">Subscription Billing: #${invoice.id}</p>
+        </div>
+        <div style="padding: 32px; color: #334155; line-height: 1.6;">
+            <p>Hello,</p>
+            <p>A new recurring invoice has been generated by <strong>${business}</strong> for your ongoing subscription/service.</p>
+            <div style="background-color: #f8fafc; padding: 24px; border-radius: 12px; margin: 24px 0; border: 1px solid #f1f5f9;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="color: #64748b; font-size: 14px;">Invoice Number</td>
+                        <td style="text-align: right; font-weight: bold; color: #0f172a;">#${invoice.id}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #64748b; font-size: 14px; padding-top: 8px;">Amount</td>
+                        <td style="text-align: right; font-weight: bold; color: #0f172a; padding-top: 8px;">${currency}${amount}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #64748b; font-size: 14px; padding-top: 8px;">Due Date</td>
+                        <td style="text-align: right; font-weight: bold; color: #0f172a; padding-top: 8px;">${new Date(invoice.DateDue).toLocaleDateString()}</td>
+                    </tr>
+                </table>
+            </div>
+            <div style="text-align: center; margin-top: 32px;">
+                <a href="https://invoicelogger.netlify.app/public/invoice/${invoice.id}" style="background-color: #166534; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Pay Invoice Now</a>
+            </div>
+        </div>
+        <div style="padding: 24px; background-color: #f8fafc; text-align: center; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0;">
+            <p>Sent via Etherbill &bull; Automated Professional Billing.</p>
+        </div>
+    </div>`;
 };
