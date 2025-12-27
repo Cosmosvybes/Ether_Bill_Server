@@ -14,7 +14,7 @@ exports.createAccount = async (user) => {
     overdue: [],
     recurring: [], // [NEW] Store recurring profiles
     id: Date.now(),
-    freemiumInvoiceCount: 3,
+    freemiumInvoiceCount: 50,
     token: 0,
     settings: {
       defaultCurrency: "",

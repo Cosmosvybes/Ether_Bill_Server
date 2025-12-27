@@ -4,7 +4,7 @@ const { findInvoice, findSentInvoice } = require("./get");
 
 exports.update = async (user_, invoice) => {
   const updateResult = await users.updateOne(
-    { email: user_, "draft.id": invoice.id },
+    { email: user_, "draft.id": Number(invoice.id) },
     { $set: { "draft.$": invoice } }
   );
   return updateResult.modifiedCount;

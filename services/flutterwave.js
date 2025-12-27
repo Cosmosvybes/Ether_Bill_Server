@@ -27,10 +27,11 @@ exports.getBanks = async (country = "NG") => {
             country: country, // Pass the country code
         };
         const response = await flw.Bank.country(payload);
+        // console.log("Flutterwave Bank Fetch Response:", response);
         return response;
     } catch (error) {
-        console.error("Error fetching banks:", error);
-        throw error;
+        console.error("Error fetching banks from Flutterwave:", error.message || error);
+        return { status: "error", message: error.message || "Failed to fetch banks" };
     }
 };
 
