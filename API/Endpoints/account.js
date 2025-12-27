@@ -256,27 +256,38 @@ exports.updatePassword = async (req, res) => {
 };
 exports.upgradeUserSubscription = async (req, res) => {
   const email = req.user;
-  const { planType } = req.body; // 'monthly' or 'yearly'
+  const { planType, tx_ref } = req.body; // Accept tx_ref from frontend
 
   try {
+    // 1. If tx_ref is provided, check for idempotency
+    if (tx_ref) {
+      const user = await getUser(email);
+      if (user && user.processedPayments && user.processedPayments.includes(tx_ref)) {
+        return res.status(200).send({ response: "Subscription already updated for this payment.", alreadyProcessed: true });
+      }
+    }
+
     let expiryDate = new Date();
     if (planType === 'yearly') {
       expiryDate.setFullYear(expiryDate.getFullYear() + 1);
     } else {
-      // Default to monthly
       expiryDate.setMonth(expiryDate.getMonth() + 1);
     }
 
-    const response = await users.updateOne(
-      { email },
-      {
-        $set: {
-          isSubscribed: true,
-          subscriptionExpiry: expiryDate.toISOString(),
-          planType: planType || 'monthly'
-        }
+    const updateQuery = {
+      $set: {
+        isSubscribed: true,
+        subscriptionExpiry: expiryDate.toISOString(),
+        planType: planType || 'monthly'
       }
-    );
+    };
+
+    // 2. Add tx_ref to processedPayments if it exists
+    if (tx_ref) {
+      updateQuery.$addToSet = { processedPayments: tx_ref };
+    }
+
+    const response = await users.updateOne({ email }, updateQuery);
 
     if (response.modifiedCount > 0 || response.matchedCount > 0) {
       return res.status(200).send({ response: "User upgraded to PRO successfully" });

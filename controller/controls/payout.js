@@ -36,10 +36,13 @@ exports.setupPayout = async (req, res) => {
             business_email: business_email || user,
             business_mobile: business_mobile || "08000000000",
             country: country || "NG",
-            split_value: 0.05 // Default split or from user settings if we monetize
+            split_value: 0.03 // Default split
         };
 
-        const fwResponse = await createSubaccount(subaccountData);
+        // Generate a unique idempotency key for this specific subaccount request
+        const idempotencyKey = `sub_${user.split('@')[0]}_${account_number}`;
+
+        const fwResponse = await createSubaccount(subaccountData, "percentage", idempotencyKey);
 
         if (fwResponse.status !== "success") {
             console.error("FW Subaccount Creation Failed:", fwResponse);

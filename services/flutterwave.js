@@ -39,35 +39,31 @@ exports.getBanks = async (country = "NG") => {
  * Create a subaccount for a user
  * @param {Object} data - { account_bank, account_number, business_name, business_email, split_value }
  * @param {string} split_type - "percentage" (default) or "flat"
+ * @param {string} idempotencyKey - Optional key to prevent duplicate creation
  */
-exports.createSubaccount = async (data, split_type = "percentage") => {
+exports.createSubaccount = async (data, split_type = "percentage", idempotencyKey = null) => {
     if (!flw) return { status: "error", message: "Flutterwave not initialized - Check Server Env" };
     try {
         const payload = {
-            account_bank: data.account_bank, // Bank Code e.g "044"
+            account_bank: data.account_bank,
             account_number: data.account_number,
             business_name: data.business_name,
             business_email: data.business_email,
             business_contact: data.business_name,
             business_contact_mobile: data.business_mobile || "",
             business_mobile: data.business_mobile || "",
-            country: "NG", // Defaulting to NG for now, can be dynamic
+            country: "NG",
             split_type: split_type,
-            split_value: 0.05, // Transaction Charge logic is handled at payment, but we need a default here.
-            // Actually, for subaccounts, the split is usually defined per transaction or fixed here.
-            // If we want the platform to take a fee, we configure it here or override in the transaction.
-            // For now setting a default small split to enable creation.
-            split_value: 0, // Set to 0 if we decide split per transaction, but FW usually requires a value.
-            // Let's assume we pass the configured percentage required by the platform, or 0 if user gets all (minus fee).
-            // Re-reading docs: split_value is required. Let's use 0.1 (10%) as placeholder or passed in data.
-            split_value: data.split_value || 0.1,
+            split_value: data.split_value || 0.03,
         };
 
-        const response = await flw.Subaccount.create(payload);
+        // If idempotencyKey is provided, we pass it in the options
+        // For flutterwave-node-v3, some methods accept headers in an options object
+        const options = idempotencyKey ? { "X-Idempotency-Key": idempotencyKey } : {};
+
+        const response = await flw.Subaccount.create(payload, options);
         return response;
     } catch (error) {
-        // console.error("Error creating subaccount:", error);
-        // Return error for controller to handle
         return { status: "error", message: error.message, data: null };
     }
 };

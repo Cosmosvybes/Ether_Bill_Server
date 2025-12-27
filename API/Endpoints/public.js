@@ -42,7 +42,8 @@ exports.verifyPublicPayment = async (req, res) => {
         const merchantEmail = invoiceData.merchant.email;
 
         // This function handles moving from sent -> paid and generating revenue stats
-        await paidUpdate(merchantEmail, invoiceId);
+        // Now handles idempotency using transactionId
+        await paidUpdate(merchantEmail, invoiceId, transactionId);
 
         // 4. Notify Merchant via Email
         const user = await getUser(merchantEmail);
