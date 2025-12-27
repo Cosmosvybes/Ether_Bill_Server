@@ -2,16 +2,26 @@ const Flutterwave = require("flutterwave-node-v3");
 
 // Initialize Flutterwave with keys from .env
 // Note: Ensure FLUTTERWAVE_PUBLIC_KEY and FLUTTERWAVE_SECRET_KEY are set in .env
-const flw = new Flutterwave(
-    process.env.FLUTTERWAVE_PUBLIC_KEY,
-    process.env.FLUTTERWAVE_SECRET_KEY
-);
+let flw;
+try {
+    if (process.env.FLUTTERWAVE_PUBLIC_KEY && process.env.FLUTTERWAVE_SECRET_KEY) {
+        flw = new Flutterwave(
+            process.env.FLUTTERWAVE_PUBLIC_KEY,
+            process.env.FLUTTERWAVE_SECRET_KEY
+        );
+    } else {
+        console.warn("Flutterwave keys not found in environment variables. Service will not function.");
+    }
+} catch (e) {
+    console.error("Failed to initialize Flutterwave:", e.message);
+}
 
 /**
  * Fetch list of banks for a specific country
  * @param {string} country - "NG", "GH", "KE", etc. Default "NG"
  */
 exports.getBanks = async (country = "NG") => {
+    if (!flw) return { status: "error", message: "Flutterwave not initialized" };
     try {
         const payload = {
             country: country, // Pass the country code
@@ -30,6 +40,7 @@ exports.getBanks = async (country = "NG") => {
  * @param {string} split_type - "percentage" (default) or "flat"
  */
 exports.createSubaccount = async (data, split_type = "percentage") => {
+    if (!flw) return { status: "error", message: "Flutterwave not initialized - Check Server Env" };
     try {
         const payload = {
             account_bank: data.account_bank, // Bank Code e.g "044"
@@ -65,6 +76,7 @@ exports.createSubaccount = async (data, split_type = "percentage") => {
  * @param {Object} data - { account_number, account_bank }
  */
 exports.verifyAccount = async (data) => {
+    if (!flw) return { status: "error", message: "Flutterwave not initialized" };
     try {
         const payload = {
             account_number: data.account_number,
