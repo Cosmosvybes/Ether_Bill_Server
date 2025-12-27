@@ -1,6 +1,11 @@
 const { users, broadcasts } = require("../../utils/Mongo/collection/collection");
 const { mailer } = require("../../utils/EmailService/Mailer");
 
+// In-Memory Cache for Exchange Rates
+let CACHED_RATES = { NGN: 1, USD: 0.0006 }; // Default Fallback (1 NGN = 0.0006 USD)
+let LAST_FETCH = 0;
+const CACHE_DURATION = 3600 * 1000; // 1 Hour
+
 /**
  * Get high-level application metrics
  */
@@ -10,13 +15,137 @@ exports.getStats = async (req, res) => {
 
         const totalUsers = allUsers.length;
         const proUsers = allUsers.filter(u => u.isSubscribed).length;
-        const totalRevenue = allUsers.reduce((acc, curr) => acc + (Number(curr.revenue) || 0), 0);
+
+        // 1. Fetch Live Rates (Hourly Cache)
+        const now = Date.now();
+        if (now - LAST_FETCH > CACHE_DURATION) {
+            try {
+                // Fetch rates relative to NGN (Base: NGN)
+                const response = await fetch("https://open.er-api.com/v6/latest/NGN");
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.rates) {
+                        CACHED_RATES = data.rates;
+                        LAST_FETCH = now;
+                        console.log("Updated Exchange Rates (Base NGN)");
+                    }
+                }
+            } catch (err) {
+                console.warn("Using cached/fallback rates. Fetch failed:", err.message);
+            }
+        }
+
+        // Helper: Normalize Currency Symbols
+        const normalizeCurrency = (input) => {
+            if (!input) return "NGN";
+            const code = input.toUpperCase().trim();
+            const map = {
+                "$": "USD", "£": "GBP", "€": "EUR", "₦": "NGN",
+                "₵": "GHS", "GH₵": "GHS", "GHS": "GHS",
+                "R": "ZAR", "ZAR": "ZAR",
+                "KSH": "KES", "KES": "KES",
+                "USH": "UGX", "UGX": "UGX",
+                "TSH": "TZS", "TZS": "TZS",
+                "FR": "XOF", "CFA": "XOF", "XOF": "XOF", "XAF": "XAF",
+                "P": "BWP", "BWP": "BWP",
+                "LE": "EGP", "EGP": "EGP",
+                "BIRR": "ETB", "ETB": "ETB",
+                "MT": "MZN", "MZN": "MZN",
+                "D": "GMD", "GMD": "GMD",
+                "L": "SZL", "SZL": "SZL",
+                "K": "MWK", "MWK": "MWK", "ZMW": "ZMW",
+                "N": "NAD", "NAD": "NAD", // Namibia
+                "LSL": "LSL", // Lesotho
+                "SCR": "SCR", // Seychelles
+                "MUR": "MUR", // Mauritius
+            };
+            return map[code] || code;
+        };
+
+        // Calculate Normalized Revenue (in NGN)
+        const totalRevenue = allUsers.reduce((acc, user) => {
+            // Check 'paid' array for invoice history
+            const paidInvoices = user.paid || [];
+
+            const userTotal = paidInvoices.reduce((sum, inv) => {
+                const rawCcy = inv.currency || inv.grandTotalCurrency || "NGN";
+                const currency = normalizeCurrency(rawCcy);
+
+                const rate = CACHED_RATES[currency] || 1;
+                const amount = Number(inv.total || inv.TOTAL || 0);
+
+                return sum + (rate > 0 ? (amount / rate) : 0);
+            }, 0);
+
+            return acc + userTotal;
+        }, 0);
 
         // Sum of all invoices sent across all users
         const totalInvoices = allUsers.reduce((acc, curr) => acc + (curr.sent?.length || 0) + (curr.paid?.length || 0), 0);
 
-        // Active recurring profiles
-        const activeSubscriptions = allUsers.reduce((acc, curr) => acc + (curr.recurring?.length || 0), 0);
+        // Calculate MRR and Active Subs
+        let activeSubscriptions = 0;
+        const activeMRR = allUsers.reduce((acc, user) => {
+            const subs = user.recurring || [];
+            activeSubscriptions += subs.length;
+
+            const userMRR = subs.reduce((sum, sub) => {
+                const rawCcy = sub.currency || sub.grandTotalCurrency || "NGN";
+                const currency = normalizeCurrency(rawCcy);
+
+                const rate = CACHED_RATES[currency] || 1;
+                const amount = Number(sub.total || sub.TOTAL || 0);
+                const normalizedAmount = rate > 0 ? (amount / rate) : 0;
+
+                let monthlyValue = 0;
+                const freq = (sub.recurring?.frequency || sub.frequency || "monthly").toLowerCase();
+                if (freq === "weekly") monthlyValue = normalizedAmount * 4.33;
+                else if (freq === "monthly") monthlyValue = normalizedAmount;
+                else if (freq === "yearly" || freq === "annually") monthlyValue = normalizedAmount / 12;
+                else monthlyValue = normalizedAmount;
+
+                return sum + monthlyValue;
+            }, 0);
+            return acc + userMRR;
+        }, 0);
+
+        // 4. Calculate Weekly Growth (New Users in last 7 days)
+        const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+        const newUsersCount = allUsers.filter(u => {
+            return u.createdAt && (Date.now() - new Date(u.createdAt).getTime() < ONE_WEEK);
+        }).length;
+        const weeklyGrowth = totalUsers > 0 ? ((newUsersCount / totalUsers) * 100).toFixed(1) : "0.0";
+
+        // 5. Calculate LTV (Revenue / Paying Users)
+        const payingUserCount = allUsers.filter(u => (u.revenue || 0) > 0 || (u.paid?.length || 0) > 0).length;
+        const ltv = payingUserCount > 0 ? (totalRevenue / payingUserCount) : 0;
+
+        // 6. Recent Users (Last 5) - Assuming natural order is chronological
+        const recentUsers = [...allUsers].reverse().slice(0, 5).map(u => ({
+            name: `${u.firstname} ${u.lastname}`,
+            email: u.email,
+            plan: u.isSubscribed ? "PRO" : "Free",
+            joined: u.createdAt || new Date().toISOString()
+        }));
+
+        // 7. Recent Invoices (Global Financial Activity)
+        const allPaidInvoices = allUsers.flatMap(u =>
+            (u.paid || []).map(inv => ({ ...inv, user: `${u.firstname} ${u.lastname}` }))
+        );
+        const recentInvoices = allPaidInvoices.reverse().slice(0, 5).map(inv => {
+            const rawCcy = inv.currency || inv.grandTotalCurrency || "NGN";
+            const currency = normalizeCurrency(rawCcy);
+            const rate = CACHED_RATES[currency] || 1;
+            const amount = Number(inv.total || inv.TOTAL || 0);
+            const normalizedAmount = rate > 0 ? (amount / rate) : 0;
+
+            return {
+                id: inv.invoiceID || inv.id || "INV-#",
+                user: inv.user,
+                amount: normalizedAmount,
+                currency: "NGN"
+            };
+        });
 
         res.status(200).json({
             totalUsers,
@@ -24,6 +153,11 @@ exports.getStats = async (req, res) => {
             totalRevenue,
             totalInvoices,
             activeSubscriptions,
+            activeMRR: activeMRR || 0,
+            ltv,
+            weeklyGrowth: weeklyGrowth + "%",
+            recentUsers,
+            recentInvoices,
             conversionRate: ((proUsers / totalUsers) * 100).toFixed(1) + "%"
         });
     } catch (error) {
