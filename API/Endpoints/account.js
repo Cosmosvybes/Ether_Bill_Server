@@ -28,9 +28,29 @@ exports.signUp = async (req, res) => {
     let isAnExistingUser = await getUser(Email);
     if (!isAnExistingUser) {
       const { insertedId } = await createAccount(user);
-      return insertedId
-        ? res.status(200).send({ response: "Account successfully created" })
-        : res.status(503).send({ response: "Something went wrong" });
+
+      if (insertedId) {
+        // [NEW] Generate and Send 2FA Code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000); // 6-digit code
+        await updateVerificationCode(Email, verificationCode);
+
+        const html = `
+          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #7c3aed;">Welcome to Etherbill! 🚀</h2>
+            <p>Your verification code is:</p>
+            <h1 style="background: #f3f4f6; padding: 10px; display: inline-block; border-radius: 5px; letter-spacing: 5px;">${verificationCode}</h1>
+            <p>Please enter this code to activate your account.</p>
+          </div>
+        `;
+
+        await mailer("Verify Your Account", Email, html);
+
+        return res.status(200).send({
+          response: "Verification code sent to your email",
+          requireVerification: true
+        });
+      }
+      return res.status(503).send({ response: "Something went wrong" });
     }
     res
       .status(403)
@@ -59,6 +79,11 @@ exports.signIn = async (req, res) => {
       // );
 
       if (user.password.toLowerCase() == password.toLowerCase()) {
+        // [NEW] Check for email verification
+        if (user.emailVerified === false) {
+          return res.status(401).send({ response: "Please verify your email to continue" });
+        }
+
         const { email } = user; //
         const token = jwt.sign({ userEmail: email }, process.env.EMAILPASS, {
           expiresIn: "60m",
@@ -214,6 +239,10 @@ exports.verifyCode = async (req, res) => {
 
     if (!isValid)
       return res.status(403).send({ response: "Code does not match" });
+
+    // [NEW] Automatically verify email if it wasn't already
+    await users.updateOne({ email: targetEmail.toLowerCase() }, { $set: { emailVerified: true } });
+
     return res.status(200).send({ message: "success" });
   } catch (error) {
     console.error("Verify Error:", error);

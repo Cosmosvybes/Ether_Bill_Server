@@ -14,6 +14,8 @@ exports.createAccount = async (user) => {
     overdue: [],
     recurring: [], // [NEW] Store recurring profiles
     id: Date.now(),
+    isAdmin: false, // [NEW] Admin flag for security
+    emailVerified: false, // [NEW] 2FA/Email Verification flag
     freemiumInvoiceCount: 50,
     token: 0,
     settings: {

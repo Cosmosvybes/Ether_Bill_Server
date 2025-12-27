@@ -64,6 +64,13 @@ router.post("/payout/setup", Auth, setupPayout);
 router.get("/payout/banks", Auth, fetchBanks);
 router.post("/payout/resolve", Auth, resolveBankAccount);
 
+// Admin Routes
+const { isAdmin } = require("../../middleware/auth/isAdmin");
+const { getStats, getAllUsers, toggleProStatus } = require("../Endpoints/admin");
+router.get("/admin/stats", Auth, isAdmin, getStats);
+router.get("/admin/users", Auth, isAdmin, getAllUsers);
+router.patch("/admin/user/toggle-pro", Auth, isAdmin, toggleProStatus);
+
 const { fetchPublicInvoice, verifyPublicPayment } = require("../Endpoints/public");
 router.get("/public/invoice/:id", fetchPublicInvoice);
 router.post("/public/invoice/verify", verifyPublicPayment);
