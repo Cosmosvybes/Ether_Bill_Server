@@ -100,3 +100,17 @@ exports.verifyTransaction = async (transactionId) => {
         return { status: "error", message: error.message };
     }
 }
+
+/**
+ * List all subaccounts
+ */
+exports.listSubaccounts = async () => {
+    if (!flw) return { status: "error", message: "Flutterwave not initialized" };
+    try {
+        const response = await flw.Subaccount.fetch_all();
+        return response;
+    } catch (error) {
+        console.error("Error fetching subaccounts:", error);
+        return { status: "error", message: error.message };
+    }
+};

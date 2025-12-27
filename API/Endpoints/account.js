@@ -13,10 +13,7 @@ config();
 
 exports.signUp = async (req, res) => {
   const { Firstname, Lastname, Email, Password } = req.body;
-  // const saltRound = 10;
-  // let hashedPassword = await bcrypt.hash(Password, saltRound);
 
-  //
   const user = {
     firstname: Firstname.toLowerCase(),
     lastname: Lastname.toLowerCase(),
@@ -68,16 +65,10 @@ exports.signIn = async (req, res) => {
   try {
     const user = await getUser(email.toLowerCase());
     if (!user) {
-      // @dev if not  registered user return status 404
       return res.status(404).send({ response: "Account not found" });
     }
-    // console.log(password, user.password);
-    if (user) {
-      // const passwordMatch = await bcrypt.compare(
-      //   password.toLowerCase(),
-      //   user.password
-      // );
 
+    if (user) {
       if (user.password.toLowerCase() == password.toLowerCase()) {
         // [NEW] Check for email verification
         if (user.emailVerified === false) {
@@ -163,11 +154,9 @@ exports.accountSettings = async (req, res) => {
 
 exports.resetPasswordCode = async (req, res) => {
   const { email, emailInstance, verificationCode } = req.body;
-  console.log("Reset Password Request:", { email, hasHtml: !!emailInstance, code: verificationCode });
 
   try {
     const user = await getUser(email.toLowerCase());
-    console.log("User Lookup Result:", user ? "Found" : "Not Found");
     if (!user) return res.status(404).send({ response: "User not found" });
 
     const response = await mailer(
@@ -206,7 +195,6 @@ async function verifyCode(email, code) {
       return false;
     }
     const verificationCode = Number(user.code);
-    console.log(`Verifying: DB=${verificationCode} vs Input=${code}`);
     const isValidCode = verificationCode == code;
     return isValidCode;
   } catch (error) {
@@ -235,7 +223,6 @@ exports.verifyCode = async (req, res) => {
     if (!targetEmail) return res.status(400).send({ response: "Email is missing" });
 
     const isValid = await verifyCode(targetEmail, code);
-    console.log("Verification Result:", isValid);
 
     if (!isValid)
       return res.status(403).send({ response: "Code does not match" });
@@ -262,8 +249,6 @@ exports.updatePassword = async (req, res) => {
   try {
     const result = await updatePassword(targetEmail, newPassword);
     const { modifiedCount, matchedCount } = result;
-
-    console.log("Password Update Result:", { matchedCount, modifiedCount });
 
     if (matchedCount === 0) {
       return res.status(404).send({ message: "User not found during password update" });

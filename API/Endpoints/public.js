@@ -18,6 +18,7 @@ exports.verifyPublicPayment = async (req, res) => {
     const { invoiceId, transactionId } = req.body;
     const { verifyTransaction } = require("../../services/flutterwave");
     const { paidUpdate } = require("../../controller/controls/update");
+    const { addRevenue } = require("../../controller");
     const { getPublicInvoice } = require("../../controller/controls/get");
     const { mailer } = require("../../utils/EmailService/Mailer");
     const { getUser } = require("../../Model/User/User");
@@ -40,6 +41,9 @@ exports.verifyPublicPayment = async (req, res) => {
         if (!invoiceData) return res.status(404).json({ response: "Invoice not found." });
 
         const merchantEmail = invoiceData.merchant.email;
+
+        // [FIX] Update User Revenue Stat
+        await addRevenue(merchantEmail, invoiceId);
 
         // This function handles moving from sent -> paid and generating revenue stats
         // Now handles idempotency using transactionId
