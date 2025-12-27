@@ -28,7 +28,7 @@ const {
   getUploadedEscrowDocs,
   uploadEscrowDealDocs,
 } = require("../Endpoints/escrow");
-const { getAccessCode } = require("../../services/paystack");
+
 const { Auth } = require("./../../middleware/auth/Auth");
 let router = express.Router(); // Router is an express package method that allows us to define our APi endpoints.
 
@@ -52,7 +52,7 @@ router.post("/update_password", updatePassword);
 router.post("/subscription/upgrade", Auth, upgradeUserSubscription);
 router.get("/escrow_proofs/", Auth, getUploadedEscrowDocs);
 router.post("/upload/escrow_docs", Auth, uploadEscrowDealDocs);
-router.post("/paystack/init", Auth, getAccessCode);
+
 
 
 // Recurring Routes
