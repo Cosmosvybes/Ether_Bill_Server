@@ -32,14 +32,6 @@ const { getAccessCode } = require("../../services/paystack");
 const { Auth } = require("./../../middleware/auth/Auth");
 let router = express.Router(); // Router is an express package method that allows us to define our APi endpoints.
 
-const limiter = rateLimiter({
-  windowMs: 5 * 60 * 1000,
-  limit: 2,
-  handler: (req, res) => {
-    res.status(429).send({ res: "Try again in the next 5 mins" });
-  },
-});
-
 router.post("/new/invoice", Auth, draftInvoice);
 router.get("/user/", Auth, userAccount);
 router.get("/invoice", Auth, getInvoice);
@@ -66,5 +58,12 @@ router.post("/paystack/init", Auth, getAccessCode);
 // Recurring Routes
 router.get("/invoice/recurring", Auth, getRecurring);
 router.delete("/invoice/recurring", Auth, deleteRecurring);
+
+const { setupPayout, fetchBanks } = require("../../controller/controls/payout");
+router.post("/payout/setup", Auth, setupPayout);
+router.get("/payout/banks", Auth, fetchBanks);
+
+const { fetchPublicInvoice } = require("../Endpoints/public");
+router.get("/public/invoice/:id", fetchPublicInvoice);
 
 exports.routes = router;

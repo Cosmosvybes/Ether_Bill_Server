@@ -30,6 +30,14 @@ exports.createAccount = async (user) => {
       businessAddress: "",
       businessName: "",
     },
+    payout: {
+      subaccount_id: "",
+      bank_name: "",
+      account_number: "",
+      account_name: "",
+      bank_code: "",
+      verified: false
+    }
   });
   return result;
 };

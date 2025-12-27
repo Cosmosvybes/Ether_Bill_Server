@@ -1,0 +1,78 @@
+const Flutterwave = require("flutterwave-node-v3");
+
+// Initialize Flutterwave with keys from .env
+// Note: Ensure FLUTTERWAVE_PUBLIC_KEY and FLUTTERWAVE_SECRET_KEY are set in .env
+const flw = new Flutterwave(
+    process.env.FLUTTERWAVE_PUBLIC_KEY,
+    process.env.FLUTTERWAVE_SECRET_KEY
+);
+
+/**
+ * Fetch list of banks for a specific country
+ * @param {string} country - "NG", "GH", "KE", etc. Default "NG"
+ */
+exports.getBanks = async (country = "NG") => {
+    try {
+        const payload = {
+            country: country, // Pass the country code
+        };
+        const response = await flw.Bank.country(payload);
+        return response;
+    } catch (error) {
+        console.error("Error fetching banks:", error);
+        throw error;
+    }
+};
+
+/**
+ * Create a subaccount for a user
+ * @param {Object} data - { account_bank, account_number, business_name, business_email, split_value }
+ * @param {string} split_type - "percentage" (default) or "flat"
+ */
+exports.createSubaccount = async (data, split_type = "percentage") => {
+    try {
+        const payload = {
+            account_bank: data.account_bank, // Bank Code e.g "044"
+            account_number: data.account_number,
+            business_name: data.business_name,
+            business_email: data.business_email,
+            business_contact: data.business_name,
+            business_contact_mobile: data.business_mobile || "",
+            business_mobile: data.business_mobile || "",
+            country: "NG", // Defaulting to NG for now, can be dynamic
+            split_type: split_type,
+            split_value: 0.05, // Transaction Charge logic is handled at payment, but we need a default here.
+            // Actually, for subaccounts, the split is usually defined per transaction or fixed here.
+            // If we want the platform to take a fee, we configure it here or override in the transaction.
+            // For now setting a default small split to enable creation.
+            split_value: 0, // Set to 0 if we decide split per transaction, but FW usually requires a value.
+            // Let's assume we pass the configured percentage required by the platform, or 0 if user gets all (minus fee).
+            // Re-reading docs: split_value is required. Let's use 0.1 (10%) as placeholder or passed in data.
+            split_value: data.split_value || 0.1,
+        };
+
+        const response = await flw.Subaccount.create(payload);
+        return response;
+    } catch (error) {
+        // console.error("Error creating subaccount:", error);
+        // Return error for controller to handle
+        return { status: "error", message: error.message, data: null };
+    }
+};
+
+/**
+ * Verify a Bank Account Number
+ * @param {Object} data - { account_number, account_bank }
+ */
+exports.verifyAccount = async (data) => {
+    try {
+        const payload = {
+            account_number: data.account_number,
+            account_bank: data.account_bank
+        }
+        const response = await flw.Misc.verify_Account(payload)
+        return response;
+    } catch (error) {
+        return { status: "error", message: error.message };
+    }
+}
