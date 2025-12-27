@@ -32,8 +32,13 @@ exports.useAppSendInvoice = async (
     }
     return updateRes;
   }
-  const tokenBalance = (user.token -= 100);
-  await users.updateOne({ email: user_ }, { $set: { token: tokenBalance } });
+  /* 
+   * [MODIFIED] Tokens are no longer used for sending invoices.
+   * If freemium count is 0, the middleware ensures the user is subscribed.
+   * So we just proceed to send without deducting tokens.
+   */
+  // const tokenBalance = (user.token -= 100);
+  // await users.updateOne({ email: user_ }, { $set: { token: tokenBalance } });
   await mailer(
     `Transaction Invoice -Reference ID ${invoice.id}📩 🎉`,
     receipient,
