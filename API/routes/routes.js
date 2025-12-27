@@ -59,9 +59,10 @@ router.post("/upload/escrow_docs", Auth, uploadEscrowDealDocs);
 router.get("/invoice/recurring", Auth, getRecurring);
 router.delete("/invoice/recurring", Auth, deleteRecurring);
 
-const { setupPayout, fetchBanks } = require("../../controller/controls/payout");
+const { setupPayout, fetchBanks, resolveBankAccount } = require("../../controller/controls/payout");
 router.post("/payout/setup", Auth, setupPayout);
 router.get("/payout/banks", Auth, fetchBanks);
+router.post("/payout/resolve", Auth, resolveBankAccount);
 
 const { fetchPublicInvoice } = require("../Endpoints/public");
 router.get("/public/invoice/:id", fetchPublicInvoice);

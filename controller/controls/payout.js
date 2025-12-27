@@ -71,6 +71,25 @@ exports.setupPayout = async (req, res) => {
     }
 };
 
+exports.resolveBankAccount = async (req, res) => {
+    try {
+        const { account_number, bank_code } = req.body;
+        if (!account_number || !bank_code) {
+            return res.status(400).json({ response: "Account number and bank code required" });
+        }
+
+        const verification = await verifyAccount({ account_number, account_bank: bank_code });
+        if (verification.status === "success") {
+            return res.status(200).json({ response: "Account verified", data: verification.data });
+        } else {
+            return res.status(400).json({ response: verification.message || "Could not verify account details" });
+        }
+    } catch (error) {
+        console.error("Resolve Account Error:", error);
+        return res.status(500).json({ response: "Internal Server Error" });
+    }
+};
+
 exports.fetchBanks = async (req, res) => {
     try {
         const { country } = req.query;
