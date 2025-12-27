@@ -25,7 +25,6 @@ async function onSubscrbibed(req, res, next) {
         });
       }
     } catch (error) {
-      ``
       res.status(500).send({ res: "Internal server error" });
     }
 }

@@ -64,7 +64,8 @@ router.post("/payout/setup", Auth, setupPayout);
 router.get("/payout/banks", Auth, fetchBanks);
 router.post("/payout/resolve", Auth, resolveBankAccount);
 
-const { fetchPublicInvoice } = require("../Endpoints/public");
+const { fetchPublicInvoice, verifyPublicPayment } = require("../Endpoints/public");
 router.get("/public/invoice/:id", fetchPublicInvoice);
+router.post("/public/invoice/verify", verifyPublicPayment);
 
 exports.routes = router;

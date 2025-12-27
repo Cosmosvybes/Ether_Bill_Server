@@ -88,3 +88,18 @@ exports.verifyAccount = async (data) => {
         return { status: "error", message: error.message };
     }
 }
+
+/**
+ * Verify a Transaction
+ * @param {string} transactionId - The transaction ID to verify
+ */
+exports.verifyTransaction = async (transactionId) => {
+    if (!flw) return { status: "error", message: "Flutterwave not initialized" };
+    try {
+        const response = await flw.Transaction.verify({ id: transactionId });
+        return response;
+    } catch (error) {
+        console.error("Error verifying transaction:", error);
+        return { status: "error", message: error.message };
+    }
+}
