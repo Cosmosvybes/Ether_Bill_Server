@@ -10,7 +10,7 @@ exports.mailer = async (_subject, receipient, _mail) => {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: "EtherBill <onboarding@resend.dev>",
+      from: process.env.EMAIL_FROM || "EtherBill <onboarding@resend.dev>",
       to: [receipient],
       subject: _subject,
       html: _mail,
