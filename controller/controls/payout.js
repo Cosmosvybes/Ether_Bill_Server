@@ -34,7 +34,7 @@ exports.setupPayout = async (req, res) => {
             account_number: account_number,
             business_name: business_name || userData.settings.businessName || "EtherBill User",
             business_email: business_email || user,
-            business_mobile: business_mobile || "",
+            business_mobile: business_mobile || "08000000000",
             country: country || "NG",
             split_value: 0.05 // Default split or from user settings if we monetize
         };
