@@ -79,7 +79,7 @@ exports.fetchBanks = async (req, res) => {
         if (response.status === "success") {
             return res.status(200).json({ response: "Banks fetched", data: response.data });
         } else {
-            return res.status(400).json({ response: "Failed to fetch banks" });
+            return res.status(400).json({ response: response.message || "Failed to fetch banks" });
         }
     } catch (error) {
         console.error("Get Banks Error:", error);
