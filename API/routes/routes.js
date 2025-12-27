@@ -11,7 +11,7 @@ const {
   updatePassword,
   upgradeUserSubscription,
 } = require("../Endpoints/account");
-const rateLimiter = require("express-rate-limit");
+
 // const { onSubscription } = require("../../middleware/auth/subscriptionAuth");
 const {
   sendInvoice,
