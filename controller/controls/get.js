@@ -20,9 +20,12 @@ exports.getPublicInvoice = async (invoiceId) => {
   // Find the user who has this invoice in their sent array
   const { users } = require("../../utils/Mongo/collection/collection");
 
-  // Note: invoiceId is string in DB usually, but passed as param.
-  // We search where "sent.id" matches.
-  const user = await users.findOne({ "sent.id": String(invoiceId) });
+  // We search where "sent.id" matches either string or number representation
+  const numericId = Number(invoiceId);
+  const queryIds = [String(invoiceId)];
+  if (!isNaN(numericId)) queryIds.push(numericId);
+
+  const user = await users.findOne({ "sent.id": { $in: queryIds } });
 
   if (!user) return null;
 
