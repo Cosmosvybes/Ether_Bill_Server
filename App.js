@@ -23,6 +23,18 @@ app.use(
 app.use(json());
 
 app.use(requestLogger());
+
+// Rate Limiter
+const rateLimit = require("express-rate-limit");
+const limiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 50, // Limit each IP to 50 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: { response: "Too many requests from this IP, please try again later." }
+});
+app.use(limiter);
+
 app.use("/api", routes);
 
 app.listen(PORT, () =>

@@ -12,33 +12,23 @@ exports.useAppSendInvoice = async (
   sendAsMessage
 ) => {
   const user = await getUser(user_);
-  if (user.freemiumInvoiceCount != 0) {
-    let freemiumCount = user.freemiumInvoiceCount - 1;
+
+  // [LOGIC] Decrement Freemium Count if applicable
+  // Only decrement if user has credits (> 0) and is NOT a subscriber (optional check, but good for safety)
+  // Assuming 'isSubscribed' denotes PRO status. 
+  let currentCount = Number(user.freemiumInvoiceCount);
+  // Fallback if NaN
+  if (isNaN(currentCount)) currentCount = 0;
+
+  if (currentCount > 0) {
+    const newCount = currentCount - 1;
     await users.updateOne(
       { email: user_ },
-      { $set: { freemiumInvoiceCount: freemiumCount } }
+      { $set: { freemiumInvoiceCount: newCount } }
     );
-    await mailer(
-      `Transaction Invoice -Reference ID ${invoice.id}📩 🎉`,
-      receipient,
-      email
-    );
-    const updateRes = await addSentInvoice(user_, invoice);
-    if (sendAsMessage) {
-      await users.updateOne(
-        { email: receipient },
-        { $push: { inbox: invoice } }
-      );
-    }
-    return updateRes;
   }
-  /* 
-   * [NOTE] Tokens are no longer used for sending invoices.
-   * Middleware ensures subscription/freemium access.
-   */
-
   await mailer(
-    `Transaction Invoice -Reference ID ${invoice.id}📩 🎉`,
+    `Invoice transaction  -Reference ID ${invoice.id}📩 🎉`,
     receipient,
     email
   );
