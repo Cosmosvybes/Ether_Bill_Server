@@ -31,6 +31,8 @@ const {
 const { Auth } = require("./../../middleware/auth/Auth");
 let router = express.Router(); // Router is an express package method that allows us to define our APi endpoints.
 
+
+// System routes
 router.post("/new/invoice", Auth, draftInvoice);
 router.get("/user/", Auth, userAccount);
 router.get("/invoice", Auth, getInvoice);

@@ -113,22 +113,25 @@ exports.setupPayout = async (req, res) => {
 exports.resolveBankAccount = async (req, res) => {
     try {
         const { account_number, bank_code } = req.body;
-        console.log("RESOLVE_ACCOUNT_REQUEST:", { account_number, bank_code });
+        console.log(`[RESOLVE_START] Request to resolve account: ${account_number} @ ${bank_code}`);
 
         if (!account_number || !bank_code) {
+            console.log("[RESOLVE_ERROR] Missing parameters");
             return res.status(400).json({ response: "Account number and bank code required" });
         }
 
         const verification = await verifyAccount({ account_number, account_bank: bank_code });
-        console.log("RESOLVE_ACCOUNT_VERIFICATION:", verification);
+        console.log("RESOLVE_ACCOUNT_VERIFICATION_RESULT:", JSON.stringify(verification, null, 2));
 
         if (verification.status === "success") {
+            console.log("[RESOLVE_SUCCESS] Account verified successfully");
             return res.status(200).json({ response: "Account verified", data: verification.data });
         } else {
+            console.error(`[RESOLVE_FAILURE] Verification failed: ${verification.message}`);
             return res.status(400).json({ response: verification.message || "Could not verify account details" });
         }
     } catch (error) {
-        console.error("Resolve Account Error:", error);
+        console.error("[RESOLVE_EXCEPTION] Unexpected error:", error);
         return res.status(500).json({ response: "Internal Server Error" });
     }
 };
