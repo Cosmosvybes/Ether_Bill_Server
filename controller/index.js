@@ -27,11 +27,15 @@ exports.useAppSendInvoice = async (
       { $set: { freemiumInvoiceCount: newCount } }
     );
   }
-  await mailer(
+  const mailerRes = await mailer(
     `Invoice transaction  -Reference ID ${invoice.id}📩 🎉`,
     receipient,
     email
   );
+
+  if (!mailerRes || !mailerRes.success) {
+    throw new Error(mailerRes?.error?.message || "Email failed to send via Resend");
+  }
 
   const sentRes = await addSentInvoice(user_, invoice);
 

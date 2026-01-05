@@ -10,7 +10,7 @@ exports.mailer = async (_subject, receipient, _mail) => {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || "EtherBill <onboarding@resend.dev>",
+      from: process.env.EMAIL_FROM || "STEADYBILL <billing@steadybill.pro>",
       to: [receipient],
       subject: _subject,
       html: _mail,
@@ -18,13 +18,13 @@ exports.mailer = async (_subject, receipient, _mail) => {
 
     if (error) {
       console.error("Resend Error Result:", error);
-      return null;
+      return { success: false, error };
     }
 
     console.log("Email Sent Successfully! ID:", data.id);
-    return data.id;
+    return { success: true, id: data.id };
   } catch (error) {
     console.error("Email Service Exception:", error);
-    return null;
+    return { success: false, error: error.message };
   }
 };

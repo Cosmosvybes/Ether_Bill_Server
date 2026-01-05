@@ -16,12 +16,15 @@ exports.sendInvoice = async (req, res) => {
       invoice,
       sendAsMessage
     );
-    return (
-      response &&
-      res.status(200).send({ response: "invoice sucessfully sent ! 🎉" })
-    );
+
+    if (response) {
+      return res.status(200).send({ response: "invoice sucessfully sent ! 🎉" });
+    } else {
+      throw new Error("Target could not be processed");
+    }
   } catch (error) {
-    res.status(503).send({ response: "Service unavailable" });
+    console.error("Send Invoice Error:", error.message);
+    res.status(503).send({ response: error.message || "Service unavailable" });
   }
 };
 
