@@ -14,12 +14,12 @@ const PORT = process.env.PORT || 8080;
 app.use(express.urlencoded({ extended: false }));
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://www.steadybill.pro", "https://steadybill.netlify.app"],
+    origin: ["http://localhost:5173", "https://www.steadybill.pro", "https://steadybill.pro", "https://steadybill.netlify.app"],
     optionsSuccessStatus: 200,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
-);
+); 
 app.use(json());
 
 app.use(requestLogger());
