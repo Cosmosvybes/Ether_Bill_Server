@@ -7,14 +7,15 @@ const { update, paidUpdate } = require("../../controller/controls/update");
 exports.sendInvoice = async (req, res) => {
   const user = req.user;
   const { sendAsMessage } = req.query;
-  const { receipient, htmlContent, invoice } = req.body;
+  const { receipient, htmlContent, invoice, pdfAttachment } = req.body;
   try {
     const response = await useAppSendInvoice(
       user,
       receipient,
       htmlContent,
       invoice,
-      sendAsMessage
+      sendAsMessage,
+      pdfAttachment
     );
 
     if (response) {

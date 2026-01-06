@@ -4,7 +4,7 @@ config();
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-exports.mailer = async (_subject, receipient, _mail) => {
+exports.mailer = async (_subject, receipient, _mail, attachments = []) => {
   const keyStatus = process.env.RESEND_API_KEY ? "Loaded" : "Missing";
   console.log(`[Scaler] Sending email to ${receipient}. Key: ${keyStatus}`);
 
@@ -14,6 +14,7 @@ exports.mailer = async (_subject, receipient, _mail) => {
       to: [receipient],
       subject: _subject,
       html: _mail,
+      attachments: attachments,
     });
 
     if (error) {

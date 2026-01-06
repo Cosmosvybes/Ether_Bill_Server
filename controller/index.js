@@ -9,7 +9,8 @@ exports.useAppSendInvoice = async (
   receipient,
   email,
   invoice,
-  sendAsMessage
+  sendAsMessage,
+  pdfAttachment
 ) => {
   const user = await getUser(user_);
 
@@ -30,7 +31,8 @@ exports.useAppSendInvoice = async (
   const mailerRes = await mailer(
     `Invoice transaction  -Reference ID ${invoice.id}📩 🎉`,
     receipient,
-    email
+    email,
+    pdfAttachment ? [pdfAttachment] : []
   );
 
   if (!mailerRes || !mailerRes.success) {
