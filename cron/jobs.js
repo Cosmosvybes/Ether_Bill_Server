@@ -113,8 +113,11 @@ exports.processRecurringInvoices = async () => {
                     const nextNextRun = new Date(nextRun);
                     const freq = profile.recurring.frequency.toLowerCase();
                     if (freq === "weekly") nextNextRun.setDate(nextNextRun.getDate() + 7);
+                    else if (freq === "bi-weekly") nextNextRun.setDate(nextNextRun.getDate() + 14);
                     else if (freq === "monthly") nextNextRun.setMonth(nextNextRun.getMonth() + 1);
-                    else nextNextRun.setFullYear(nextNextRun.getFullYear() + 100); // effectively disable if weird
+                    else if (freq === "quarterly") nextNextRun.setMonth(nextNextRun.getMonth() + 3);
+                    else if (freq === "annually" || freq === "yearly") nextNextRun.setFullYear(nextNextRun.getFullYear() + 1);
+                    else nextNextRun.setMonth(nextNextRun.getMonth() + 1); // Default to monthly fallback
 
                     profile.recurring.nextRun = nextNextRun.toISOString();
                     processedAny = true;
