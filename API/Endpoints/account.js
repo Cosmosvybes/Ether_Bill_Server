@@ -78,7 +78,7 @@ exports.signIn = async (req, res) => {
 
         const { email } = user; //
         const token = jwt.sign({ userEmail: email }, process.env.EMAILPASS, {
-          expiresIn: "60m",
+          expiresIn: "7d",
         });
         return res.status(200).send({
           response: `Welcome back ${email}`,
