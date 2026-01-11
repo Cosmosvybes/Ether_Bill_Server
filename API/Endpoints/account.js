@@ -335,3 +335,37 @@ exports.upgradeUserSubscription = async (req, res) => {
     res.status(500).send({ response: "Internal server error" });
   }
 };
+
+exports.topupSMSCredits = async (req, res) => {
+  const email = req.user;
+  const { amount, credits, tx_ref } = req.body;
+
+  if (!credits || !tx_ref) {
+    return res.status(400).send({ response: "Credits and transaction reference are required" });
+  }
+
+  try {
+    // 1. Idempotency check
+    const user = await getUser(email);
+    if (user && user.processedPayments && user.processedPayments.includes(tx_ref)) {
+      return res.status(200).send({ response: "Top-up already processed for this payment.", alreadyProcessed: true });
+    }
+
+    // 2. Increment balance and track payment
+    const updateResult = await users.updateOne(
+      { email },
+      {
+        $inc: { smsBalance: Number(credits) },
+        $addToSet: { processedPayments: tx_ref }
+      }
+    );
+
+    if (updateResult.modifiedCount > 0 || updateResult.matchedCount > 0) {
+      return res.status(200).send({ response: `Successfully added ${credits} SMS credits`, newBalance: (user.smsBalance || 0) + Number(credits) });
+    }
+    return res.status(404).send({ response: "User not found" });
+  } catch (error) {
+    console.error("Top-up Error:", error);
+    res.status(500).send({ response: "Internal server error" });
+  }
+};

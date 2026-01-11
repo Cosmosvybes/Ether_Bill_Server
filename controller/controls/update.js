@@ -44,3 +44,14 @@ exports.paidUpdate = async (user_, invoiceID, transactionId) => {
 
   return response.modifiedCount;
 };
+
+exports.deductSMSBalance = async (email) => {
+  try {
+    await users.updateOne(
+      { email: email, smsBalance: { $gt: 0 } },
+      { $inc: { smsBalance: -1 } }
+    );
+  } catch (error) {
+    console.error("Failed to deduct SMS balance:", error);
+  }
+};

@@ -2,6 +2,7 @@ const { users } = require("../utils/Mongo/collection/collection");
 const { mailer } = require("../utils/EmailService/Mailer");
 const { sendSMS } = require("../utils/SMSService/SMSService");
 const { addSentInvoice } = require("../controller/controls/add");
+const { deductSMSBalance } = require("../controller/controls/update");
 
 /**
  * Job to check for overdue invoices and send reminders
@@ -13,14 +14,20 @@ exports.checkOverdueInvoices = async () => {
         const allUsers = await users.find({}).toArray();
 
         for (const user of allUsers) {
-            if (!user.settings || !user.settings.autoChase) continue;
-
             const sentInvoices = user.sent || [];
+            if (sentInvoices.length === 0) continue;
+
             const updatedSent = [];
             let modified = false;
 
             for (const invoice of sentInvoices) {
-                if (invoice.status === "Paid") {
+                // Determine if we should chase this specific invoice
+                // Use per-invoice setting if it exists, otherwise fallback to global
+                const shouldChase = invoice.autoChase !== undefined
+                    ? invoice.autoChase
+                    : (user.settings?.autoChase);
+
+                if (invoice.status === "Paid" || !shouldChase) {
                     updatedSent.push(invoice);
                     continue;
                 }
@@ -35,7 +42,7 @@ exports.checkOverdueInvoices = async () => {
                     const hoursSinceLastChase = lastChased ? (now - lastChased) / (1000 * 60 * 60) : 24;
 
                     if (hoursSinceLastChase >= 23) {
-                        console.log(`Chasing invoice ${invoice.id} for user ${user.email}`);
+                        // console.log(`Chasing invoice ${invoice.id} for user ${user.email}`);
 
                         const recipientEmail = invoice.receipient?.email || invoice.receipient;
                         if (recipientEmail) {
@@ -48,12 +55,15 @@ exports.checkOverdueInvoices = async () => {
 
                         // [NEW] SMS Reminder
                         const recipientPhone = invoice.receipient?.phoneNumber || invoice.phoneNumber;
-                        if (user.settings?.smsNotification && recipientPhone) {
+                        if (user.settings?.smsNotification && recipientPhone && (user.smsBalance > 0)) {
                             const business = user.settings?.businessName || `${user.firstname} ${user.lastname}`;
                             const amount = Number(invoice.TOTAL || invoice.total || 0).toLocaleString();
                             const currency = invoice.currency || '$';
-                            const smsBody = `Reminder: Your invoice (#${invoice.id}) from ${business} for ${currency}${amount} is now overdue. Please settle it here: https://invoicelogger.netlify.app/public/invoice/${invoice.id}`;
-                            await sendSMS(recipientPhone, smsBody);
+                            const smsBody = `Reminder: Your invoice (#${invoice.id}) from ${business} for ${currency}${amount} is now overdue. Please settle it here: https://steadybill.pro/public/invoice/${invoice.id}`;
+                            const smsRes = await sendSMS(recipientPhone, smsBody);
+                            if (smsRes.success) {
+                                await deductSMSBalance(user.email);
+                            }
                         }
 
                         invoice.lastChased = now.toISOString();
@@ -77,11 +87,12 @@ exports.checkOverdueInvoices = async () => {
  * Runs daily at 9:00 AM
  */
 exports.processRecurringInvoices = async () => {
-    console.log("Running Recurring Invoice Job...");
+    // console.log("Running Recurring Invoice Job...");
     try {
         const allUsers = await users.find({}).toArray();
         for (const user of allUsers) {
             if (!user.recurring || user.recurring.length === 0) continue;
+            if (!user.isSubscribed) continue; // [RESTORED] Recurring is a PRO feature
 
             const activeRecurring = [];
             let processedAny = false;
@@ -106,13 +117,13 @@ exports.processRecurringInvoices = async () => {
                     newInvoice.DateDue = dueDate.toISOString();
                     newInvoice.dueDate = newInvoice.DateDue; // Legacy support
 
-                    console.log(`Generating recurring invoice ${newInvoice.id} for ${user.email}...`);
+                    // console.log(`Generating recurring invoice ${newInvoice.id} for ${user.email}...`);
 
                     // 2. Send Professional Email
                     const recipientEmail = newInvoice.receipient?.email || newInvoice.receipient;
                     if (recipientEmail) {
                         await mailer(
-                            `New Invoice Available: #${newInvoice.id} from ${user.firstname || 'Etherbill User'}`,
+                            `New Invoice Available: #${newInvoice.id} from ${user.firstname || 'Steadybill User'}`,
                             recipientEmail,
                             createRecurringNotificationEmail(newInvoice, user)
                         );
@@ -120,12 +131,15 @@ exports.processRecurringInvoices = async () => {
 
                     // [NEW] SMS Notification
                     const recipientPhone = newInvoice.receipient?.phoneNumber || newInvoice.phoneNumber;
-                    if (user.settings?.smsNotification && recipientPhone) {
+                    if (user.settings?.smsNotification && recipientPhone && (user.smsBalance > 0)) {
                         const business = user.settings?.businessName || `${user.firstname} ${user.lastname}`;
                         const amount = Number(newInvoice.TOTAL || newInvoice.total || 0).toLocaleString();
                         const currency = newInvoice.currency || '$';
-                        const smsBody = `Hello, a new recurring invoice (#${newInvoice.id}) has been generated for you by ${business} (${currency}${amount}). View it here: https://invoicelogger.netlify.app/public/invoice/${newInvoice.id}`;
-                        await sendSMS(recipientPhone, smsBody);
+                        const smsBody = `Hello, a new recurring invoice (#${newInvoice.id}) has been generated for you by ${business} (${currency}${amount}). View it here: https://steadybill.pro/public/invoice/${newInvoice.id}`;
+                        const smsRes = await sendSMS(recipientPhone, smsBody);
+                        if (smsRes.success) {
+                            await deductSMSBalance(user.email);
+                        }
                     }
 
                     // 3. Save to database

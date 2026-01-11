@@ -4,6 +4,7 @@ const { mailer } = require("../utils/EmailService/Mailer");
 const { sendSMS } = require("../utils/SMSService/SMSService");
 const { addSentInvoice } = require("./controls/add");
 const { findSentInvoice } = require("./controls/get");
+const { deductSMSBalance } = require("./controls/update"); // Added import
 
 exports.useAppSendInvoice = async (
   user_,
@@ -42,13 +43,16 @@ exports.useAppSendInvoice = async (
 
   // [NEW] SMS Notification
   const recipientPhone = invoice.receipient?.phoneNumber || invoice.phoneNumber;
-  if (user.settings?.smsNotification && recipientPhone) {
+  if (user.settings?.smsNotification && recipientPhone && (user.smsBalance > 0)) {
     const business = user.settings?.businessName || `${user.firstname} ${user.lastname}`;
     const amount = Number(invoice.TOTAL || invoice.total || 0).toLocaleString();
     const currency = invoice.currency || '$';
-    const smsBody = `Hello, you have a new invoice (#${invoice.id}) from ${business} for ${currency}${amount}. View it here: https://invoicelogger.netlify.app/public/invoice/${invoice.id}`;
+    const smsBody = `Hello, you have a new invoice (#${invoice.id}) from ${business} for ${currency}${amount}. View it here: https://steadybill.pro/public/invoice/${invoice.id}`;
 
-    await sendSMS(recipientPhone, smsBody);
+    const smsRes = await sendSMS(recipientPhone, smsBody);
+    if (smsRes.success) {
+      await deductSMSBalance(user.email);
+    }
   }
 
   const sentRes = await addSentInvoice(user_, invoice);

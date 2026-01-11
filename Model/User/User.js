@@ -10,13 +10,13 @@ exports.createAccount = async (user) => {
     clients: [],
     inbox: [],
     paid: [],
-    paid: [],
     overdue: [],
-    recurring: [], // [NEW] Store recurring profiles
+    recurring: [], 
     id: Date.now(),
-    isAdmin: false, // [NEW] Admin flag for security
-    emailVerified: false, // [NEW] 2FA/Email Verification flag
-    phoneNumber: "", // [NEW] User phone number for SMS notifications
+    isAdmin: false, 
+    emailVerified: false, 
+    phoneNumber: "", 
+    smsBalance: 0, 
     freemiumInvoiceCount: 50,
     token: 0,
     settings: {
@@ -26,11 +26,11 @@ exports.createAccount = async (user) => {
       businessAddress: "",
       sharingToken: false,
       paymentRecieivedNotification: true,
-      revenueNotification: true, // [NEW] Match Frontend key
-      smsNotification: true, // [NEW] Toggle for SMS notifications
+      revenueNotification: true, 
+      smsNotification: false, 
       autoChase: false,
-      defaultPaymentTerms: false, // [NEW] 30 Days Default
-      applyTax: false, // [NEW] Apply Tax Default
+      defaultPaymentTerms: false, 
+      applyTax: false, 
       businessAddress: "",
       businessName: "",
     },
