@@ -1,6 +1,7 @@
 const { getUser } = require("../Model/User/User");
 const { users } = require("../utils/Mongo/collection/collection");
 const { mailer } = require("../utils/EmailService/Mailer");
+const { sendSMS } = require("../utils/SMSService/SMSService");
 const { addSentInvoice } = require("./controls/add");
 const { findSentInvoice } = require("./controls/get");
 
@@ -37,6 +38,17 @@ exports.useAppSendInvoice = async (
 
   if (!mailerRes || !mailerRes.success) {
     throw new Error(mailerRes?.error?.message || "Email failed to send via Resend");
+  }
+
+  // [NEW] SMS Notification
+  const recipientPhone = invoice.receipient?.phoneNumber || invoice.phoneNumber;
+  if (user.settings?.smsNotification && recipientPhone) {
+    const business = user.settings?.businessName || `${user.firstname} ${user.lastname}`;
+    const amount = Number(invoice.TOTAL || invoice.total || 0).toLocaleString();
+    const currency = invoice.currency || '$';
+    const smsBody = `Hello, you have a new invoice (#${invoice.id}) from ${business} for ${currency}${amount}. View it here: https://invoicelogger.netlify.app/public/invoice/${invoice.id}`;
+
+    await sendSMS(recipientPhone, smsBody);
   }
 
   const sentRes = await addSentInvoice(user_, invoice);

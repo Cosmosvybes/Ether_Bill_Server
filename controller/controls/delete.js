@@ -18,3 +18,11 @@ exports.removeRecurringInvoice = async (userEmail, invoiceId) => {
   );
   return response;
 };
+
+exports.removeClient = async (userEmail, clientEmail) => {
+  const response = await users.updateOne(
+    { email: userEmail },
+    { $pull: { clients: { email: clientEmail } } }
+  );
+  return response.modifiedCount;
+};

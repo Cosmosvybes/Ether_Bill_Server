@@ -16,6 +16,7 @@ exports.createAccount = async (user) => {
     id: Date.now(),
     isAdmin: false, // [NEW] Admin flag for security
     emailVerified: false, // [NEW] 2FA/Email Verification flag
+    phoneNumber: "", // [NEW] User phone number for SMS notifications
     freemiumInvoiceCount: 50,
     token: 0,
     settings: {
@@ -26,6 +27,7 @@ exports.createAccount = async (user) => {
       sharingToken: false,
       paymentRecieivedNotification: true,
       revenueNotification: true, // [NEW] Match Frontend key
+      smsNotification: true, // [NEW] Toggle for SMS notifications
       autoChase: false,
       defaultPaymentTerms: false, // [NEW] 30 Days Default
       applyTax: false, // [NEW] Apply Tax Default

@@ -1,5 +1,6 @@
 const { users } = require("../utils/Mongo/collection/collection");
 const { mailer } = require("../utils/EmailService/Mailer");
+const { sendSMS } = require("../utils/SMSService/SMSService");
 const { addSentInvoice } = require("../controller/controls/add");
 
 /**
@@ -43,9 +44,20 @@ exports.checkOverdueInvoices = async () => {
                                 recipientEmail,
                                 createOverdueReminderEmail(invoice, user)
                             );
-                            invoice.lastChased = now.toISOString();
-                            modified = true;
                         }
+
+                        // [NEW] SMS Reminder
+                        const recipientPhone = invoice.receipient?.phoneNumber || invoice.phoneNumber;
+                        if (user.settings?.smsNotification && recipientPhone) {
+                            const business = user.settings?.businessName || `${user.firstname} ${user.lastname}`;
+                            const amount = Number(invoice.TOTAL || invoice.total || 0).toLocaleString();
+                            const currency = invoice.currency || '$';
+                            const smsBody = `Reminder: Your invoice (#${invoice.id}) from ${business} for ${currency}${amount} is now overdue. Please settle it here: https://invoicelogger.netlify.app/public/invoice/${invoice.id}`;
+                            await sendSMS(recipientPhone, smsBody);
+                        }
+
+                        invoice.lastChased = now.toISOString();
+                        modified = true;
                     }
                 }
                 updatedSent.push(invoice);
@@ -104,6 +116,16 @@ exports.processRecurringInvoices = async () => {
                             recipientEmail,
                             createRecurringNotificationEmail(newInvoice, user)
                         );
+                    }
+
+                    // [NEW] SMS Notification
+                    const recipientPhone = newInvoice.receipient?.phoneNumber || newInvoice.phoneNumber;
+                    if (user.settings?.smsNotification && recipientPhone) {
+                        const business = user.settings?.businessName || `${user.firstname} ${user.lastname}`;
+                        const amount = Number(newInvoice.TOTAL || newInvoice.total || 0).toLocaleString();
+                        const currency = newInvoice.currency || '$';
+                        const smsBody = `Hello, a new recurring invoice (#${newInvoice.id}) has been generated for you by ${business} (${currency}${amount}). View it here: https://invoicelogger.netlify.app/public/invoice/${newInvoice.id}`;
+                        await sendSMS(recipientPhone, smsBody);
                     }
 
                     // 3. Save to database

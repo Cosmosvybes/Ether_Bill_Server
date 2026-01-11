@@ -22,6 +22,7 @@ exports.addToDraft = async (user, invoice) => {
 };
 
 exports.addClient = async (user, client) => {
+  // client object should include email, name, phoneNumber, etc.
   const response = await users.updateOne(
     { email: user },
     { $push: { clients: { ...client } } }

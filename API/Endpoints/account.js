@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { createAccount, getUser } = require("../../Model/User/User");
 const { addClient, findClient } = require("../../controller/controls/add");
+const { removeClient } = require("../../controller/controls/delete");
 const { useAppSettings } = require("../../controller");
 const { config } = require("dotenv");
 const { mailer } = require("../../utils/EmailService/Mailer");
@@ -128,6 +129,28 @@ exports.addNewClient = async (req, res) => {
     );
   } catch (error) {
     res.status(500).send({ reponse: "Operation failed try again" });
+  }
+};
+
+//?? //////////////////////////////////////////////////////////
+// DELETE CLIENT
+//?? //////////////////////////////////////////////////////////
+exports.deleteClient = async (req, res) => {
+  const userEmail = req.user;
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).send({ response: "Client email is required" });
+  }
+
+  try {
+    const response = await removeClient(userEmail, email);
+    if (response) {
+      return res.status(200).send({ response: "Client deleted successfully" });
+    }
+    return res.status(404).send({ response: "Client not found" });
+  } catch (error) {
+    res.status(500).send({ response: "Operation failed, try again" });
   }
 };
 

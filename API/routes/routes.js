@@ -5,6 +5,7 @@ const {
   signUp,
   userAccount,
   addNewClient,
+  deleteClient,
   accountSettings,
   resetPasswordCode,
   verifyCode,
@@ -46,6 +47,7 @@ router.post("/create_account", signUp);
 
 router.delete("/invoice/delete", Auth, deleteInvoice);
 router.post("/client/new", Auth, onSubscription, addNewClient);
+router.delete("/client/delete", Auth, deleteClient);
 router.post("/account/settings", Auth, accountSettings);
 router.post("/reset-password", resetPasswordCode);
 router.post("/verify_code", verifyCode);
