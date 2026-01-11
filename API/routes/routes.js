@@ -53,8 +53,8 @@ router.post("/account/settings", Auth, accountSettings);
 router.post("/reset-password", resetPasswordCode);
 router.post("/verify_code", verifyCode);
 router.post("/update_password", updatePassword);
-router.post("/account/upgrade", authenticatedUser, upgradeUserSubscription);
-router.post("/account/sms/topup", authenticatedUser, topupSMSCredits);
+router.post("/account/upgrade", Auth, upgradeUserSubscription);
+router.post("/account/sms/topup", Auth, topupSMSCredits);
 router.get("/escrow_proofs/", Auth, getUploadedEscrowDocs);
 router.post("/upload/escrow_docs", Auth, uploadEscrowDealDocs);
 
