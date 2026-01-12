@@ -82,7 +82,7 @@ exports.signIn = async (req, res) => {
         });
         return res.status(200).send({
           response: `Welcome back ${email}`,
-          token: encodeURIComponent(token),
+          token,
         });
       } else {
         // return status 403 if password doesn't match

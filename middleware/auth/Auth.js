@@ -9,7 +9,7 @@ exports.Auth = (req, res, next) => {
       return res.status(401).send({ response: "please sign in to your account" });
     }
 
-    const tokenHeader = decodeURIComponent(authHeader);
+    const tokenHeader = authHeader;
     const token = tokenHeader.split(" ")[1];
 
     if (!token) {
@@ -21,6 +21,6 @@ exports.Auth = (req, res, next) => {
     next();
   } catch (error) {
     console.error("Auth Middleware Error:", error.message);
-    res.status(403).send({ response: "session expired , sign in again!" });
+    res.status(401).send({ response: "session expired , sign in again!" });
   }
 };
