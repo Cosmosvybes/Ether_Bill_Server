@@ -197,7 +197,7 @@ const createOverdueReminderEmail = (invoice, user) => {
             </div>
         </div>
         <div style="padding: 24px; background-color: #f8fafc; text-align: center; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0;">
-            <p>Sent via Etherbill &bull; Simple, professional invoicing.</p>
+            <p>Sent via SteadyBill &bull; Simple, professional invoicing.</p>
         </div>
     </div>`;
 };
@@ -240,7 +240,7 @@ const createRecurringNotificationEmail = (invoice, user) => {
             </div>
         </div>
         <div style="padding: 24px; background-color: #f8fafc; text-align: center; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0;">
-            <p>Sent via Etherbill &bull; Automated Professional Billing.</p>
+            <p>Sent via SteadyBill &bull; Automated Professional Billing.</p>
         </div>
     </div>`;
 };

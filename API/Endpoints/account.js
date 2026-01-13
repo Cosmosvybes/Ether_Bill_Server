@@ -34,7 +34,7 @@ exports.signUp = async (req, res) => {
 
         const html = `
           <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #7c3aed;">Welcome to Etherbill! 🚀</h2>
+            <h2 style="color: #7c3aed;">Welcome to SteadyBill! 🚀</h2>
             <p>Your verification code is:</p>
             <h1 style="background: #f3f4f6; padding: 10px; display: inline-block; border-radius: 5px; letter-spacing: 5px;">${verificationCode}</h1>
             <p>Please enter this code to activate your account.</p>
