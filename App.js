@@ -19,13 +19,16 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
-); 
+);
 app.use(json());
 
 app.use(requestLogger());
 
 
+const { expenseRoutes } = require("./API/Endpoints/expenseRoutes");
+
 app.use("/api", routes);
+app.use("/api/expenses", expenseRoutes);
 
 app.listen(PORT, () =>
   console.log(`Server instantiated on Worker ${PORT} on cpu ${process.pid}`)

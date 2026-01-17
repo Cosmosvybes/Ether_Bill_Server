@@ -291,18 +291,45 @@ exports.updatePassword = async (req, res) => {
     res.status(500).send({ reponse: "Internal server error, try again!" });
   }
 };
+const { verifyPaystackTransaction } = require("../../services/paystack");
+const { PRICING } = require("../../utils/pricing");
+
 exports.upgradeUserSubscription = async (req, res) => {
   const email = req.user;
-  const { planType, tx_ref } = req.body; // Accept tx_ref from frontend
+  const { planType, tx_ref, provider } = req.body; // Accept tx_ref and provider
 
   try {
-    // 1. If tx_ref is provided, check for idempotency
-    if (tx_ref) {
-      const user = await getUser(email);
-      if (user && user.processedPayments && user.processedPayments.includes(tx_ref)) {
-        return res.status(200).send({ response: "Subscription already updated for this payment.", alreadyProcessed: true });
+    const user = await getUser(email);
+    if (!user) return res.status(404).send({ response: "User not found" });
+
+    // 1. Idempotency Check
+    if (tx_ref && user.processedPayments && user.processedPayments.includes(tx_ref)) {
+      return res.status(200).send({ response: "Subscription already updated for this payment.", alreadyProcessed: true });
+    }
+
+    // 2. Payment Verification (Paystack)
+    if (provider === 'paystack') {
+      try {
+        const verification = await verifyPaystackTransaction(tx_ref);
+        if (!verification.status || verification.data.status !== 'success') {
+          return res.status(400).send({ response: "Payment verification failed" });
+        }
+
+        // Price Enforcement
+        const amountPaid = verification.data.amount / 100; // Paystack returns kobo
+        const expectedPrice = planType === 'pro_services' ? PRICING.NGN.PRO_SERVICES : PRICING.NGN.MONTHLY;
+
+        // Allow small margin of error or exact match (flexible for now, but strict is better)
+        if (amountPaid < expectedPrice) {
+          return res.status(400).send({ response: `Insufficient payment amount. Expected ${expectedPrice}, got ${amountPaid}` });
+        }
+
+      } catch (err) {
+        console.error("Paystack Verification Error:", err);
+        return res.status(500).send({ response: "Payment verification error" });
       }
     }
+    // TODO: Add Flutterwave verification here if needed (currently trusted/legacy)
 
     let expiryDate = new Date();
     if (planType === 'yearly') {
@@ -319,7 +346,6 @@ exports.upgradeUserSubscription = async (req, res) => {
       }
     };
 
-    // 2. Add tx_ref to processedPayments if it exists
     if (tx_ref) {
       updateQuery.$addToSet = { processedPayments: tx_ref };
     }
