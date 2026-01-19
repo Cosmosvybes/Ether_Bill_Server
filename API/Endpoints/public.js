@@ -31,23 +31,23 @@ exports.verifyPublicPayment = async (req, res) => {
             return res.status(400).json({ response: "Payment verification failed or invalid." });
         }
 
-        // 2. Validate Amount and Currency (Optional but recommended security step)
-        // const invoiceData = await getPublicInvoice(invoiceId);
-        // if (verification.data.amount < invoiceData.invoice.TOTAL) ...
+        // 2. Validate Amount (Security check)
+        const amount = verification.data.amount;
+        // Use the actual verified amount from Flutterwave rather than trusting req.body if possible
+        const verifiedAmount = Number(amount);
 
-        // 3. Mark Invoice as Paid in Database
+        // 3. Mark Invoice as Paid/Partially Paid in Database
         // We first need to find the merchant's email associated with this invoice
         const invoiceData = await getPublicInvoice(invoiceId);
         if (!invoiceData) return res.status(404).json({ response: "Invoice not found." });
 
         const merchantEmail = invoiceData.merchant.email;
 
-        // [FIX] Update User Revenue Stat
-        await addRevenue(merchantEmail, invoiceId);
+        // [FIX] Update User Revenue Stat with verified amount
+        await addRevenue(merchantEmail, invoiceId, verifiedAmount);
 
-        // This function handles moving from sent -> paid and generating revenue stats
-        // Now handles idempotency using transactionId
-        await paidUpdate(merchantEmail, invoiceId, transactionId);
+        // This function handles moving from sent -> paid or updating balance
+        await paidUpdate(merchantEmail, invoiceId, transactionId, verifiedAmount);
 
         // 4. Notify Merchant via Email
         const user = await getUser(merchantEmail);

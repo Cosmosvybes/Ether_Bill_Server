@@ -10,7 +10,7 @@ exports.update = async (user_, invoice) => {
   return updateResult.modifiedCount;
 };
 
-exports.paidUpdate = async (user_, invoiceID, transactionId) => {
+exports.paidUpdate = async (user_, invoiceID, transactionId, amountPaid) => {
   const user = await getUser(user_);
 
   // 1. Check if transaction was already processed
@@ -18,19 +18,42 @@ exports.paidUpdate = async (user_, invoiceID, transactionId) => {
     return 0; // Already processed
   }
 
-  // 2. Check if invoice is already marked as paid
-  const isAlreadyPaid = user.paid && user.paid.some(inv => String(inv.id) === String(invoiceID));
-  if (isAlreadyPaid) return 0;
+  // 2. Find the invoice in 'sent' array
+  const invoiceIndex = user.sent ? user.sent.findIndex(inv => String(inv.id) === String(invoiceID)) : -1;
 
-  const invoice = await findSentInvoice(user_, invoiceID);
-  if (!invoice) return 0; // Not found in sent, maybe already moved or deleted
+  if (invoiceIndex === -1) {
+    // Check if it's already in 'paid' (maybe full payment already happened)
+    const isAlreadyPaid = user.paid && user.paid.some(inv => String(inv.id) === String(invoiceID));
+    if (isAlreadyPaid) return 0;
+    return 0; // Not found
+  }
 
-  invoice.status = "paid";
+  const invoice = user.sent[invoiceIndex];
+  const totalAmount = Number(invoice.TOTAL);
+  const currentAmountPaid = Number(invoice.amountPaid || 0);
+  const newAmountPaid = currentAmountPaid + Number(amountPaid || totalAmount);
+  const remainingBalance = totalAmount - newAmountPaid;
 
-  const updateQuery = {
-    $push: { paid: { ...invoice } },
-    $pull: { sent: { id: String(invoiceID) } }
-  };
+  invoice.amountPaid = newAmountPaid;
+  invoice.balance = remainingBalance > 0 ? remainingBalance : 0;
+  invoice.updatedAt = new Date().toISOString();
+
+  let updateQuery = {};
+
+  if (remainingBalance > 0) {
+    // Partial Payment: Update status and keep in 'sent'
+    invoice.status = "partially_paid";
+    updateQuery = {
+      $set: { [`sent.${invoiceIndex}`]: invoice }
+    };
+  } else {
+    // Full Payment: Mark as paid and move to 'paid' array
+    invoice.status = "paid";
+    updateQuery = {
+      $push: { paid: { ...invoice } },
+      $pull: { sent: { id: String(invoiceID) } }
+    };
+  }
 
   // 3. Track transactionId if provided
   if (transactionId) {

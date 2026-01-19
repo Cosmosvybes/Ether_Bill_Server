@@ -119,8 +119,37 @@ exports.processRecurringInvoices = async () => {
 
                     // console.log(`Generating recurring invoice ${newInvoice.id} for ${user.email}...`);
 
-                    // 2. Send Professional Email
+                    // [NEW] Balance Carry-Over Logic
                     const recipientEmail = newInvoice.receipient?.email || newInvoice.receipient;
+                    let balanceBroughtForward = 0;
+
+                    if (recipientEmail) {
+                        const outstandingInvoices = (user.sent || []).filter(inv =>
+                            (inv.receipient?.email === recipientEmail || inv.receipient === recipientEmail) &&
+                            (inv.status === "sent" || inv.status === "partially_paid")
+                        );
+
+                        balanceBroughtForward = outstandingInvoices.reduce((sum, inv) => {
+                            const bal = inv.balance !== undefined ? inv.balance : inv.TOTAL;
+                            return sum + Number(bal);
+                        }, 0);
+
+                        if (balanceBroughtForward > 0) {
+                            newInvoice.itemList = [
+                                ...(newInvoice.itemList || []),
+                                {
+                                    description: "Balance Brought Forward (Previous Unpaid)",
+                                    unitPrice: balanceBroughtForward,
+                                    quantity: 1,
+                                    unitTotal: balanceBroughtForward,
+                                    itemID: Date.now() + 1
+                                }
+                            ];
+                            newInvoice.TOTAL = Number(newInvoice.TOTAL) + balanceBroughtForward;
+                        }
+                    }
+
+                    // 2. Send Professional Email
                     if (recipientEmail) {
                         await mailer(
                             `New Invoice Available: #${newInvoice.id} from ${user.firstname || 'Steadybill User'}`,

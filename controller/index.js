@@ -88,9 +88,9 @@ exports.useAppSettings = async (user_, settings) => {
   return settingsRes;
 };
 
-exports.addRevenue = async (user_, invoiceID) => {
+exports.addRevenue = async (user_, invoiceID, amountProvided) => {
   const invoice = await findSentInvoice(user_, invoiceID);
-  const balance = invoice.TOTAL;
+  const balance = amountProvided !== undefined ? amountProvided : invoice.TOTAL;
   const user = await getUser(user_);
   let currentRevenueBalance = user.revenue;
   let newBalance = Number(currentRevenueBalance) + Number(balance);
