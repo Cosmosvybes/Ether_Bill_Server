@@ -37,7 +37,8 @@ exports.getPublicInvoice = async (invoiceId) => {
     merchant: {
       businessName: user.settings.businessName,
       email: user.email,
-      payout: user.payout // paying with subaccount
+      payout: user.payout, // active provider
+      payouts: user.payouts // all configured providers
     }
   };
 };

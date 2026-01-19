@@ -1,17 +1,19 @@
 const { createSubaccount, getBanks, verifyAccount } = require("../../services/flutterwave");
+const { createPaystackSubaccount, getPaystackBanks, verifyPaystackAccount } = require("../../services/paystack");
 const { users } = require("../../utils/Mongo/collection/collection");
 const { getUser } = require("../../Model/User/User");
 const fs = require("fs");
 
 exports.setupPayout = async (req, res) => {
     const { user } = req;
-    const { bank_code, account_number, business_name, business_email, business_mobile, country } = req.body;
+    const { bank_code, account_number, business_name, business_email, business_mobile, country, provider } = req.body;
+    const activeProvider = provider || "flutterwave";
 
     try {
-        fs.appendFileSync("serverLog.txt", `\n[PAYOUT_ENTRY] ${new Date().toISOString()}: user=${user}, bank=${bank_code}, acc=${account_number}\n`);
+        fs.appendFileSync("serverLog.txt", `\n[PAYOUT_ENTRY] ${new Date().toISOString()}: user=${user}, bank=${bank_code}, acc=${account_number}, provider=${activeProvider}\n`);
     } catch (e) { }
 
-    console.log("PAYOUT_SETUP_REQUEST:", { user, bank_code, account_number, business_name });
+    console.log("PAYOUT_SETUP_REQUEST:", { user, bank_code, account_number, business_name, activeProvider });
 
     if (!bank_code || !account_number) {
         return res.status(400).json({ response: "Bank code and account number are required" });
@@ -23,74 +25,94 @@ exports.setupPayout = async (req, res) => {
         const userData = await getUser(user);
         if (!userData) return res.status(404).json({ response: "User not found" });
 
-        // 3. Verify Account Number first
-        const verification = await verifyAccount({ account_number, account_bank: bank_code });
-        console.log("PAYOUT_VERIFICATION:", verification);
+        let verification;
+        let subaccountResult;
+        let accountName = "";
 
-        if (verification.status === "error") {
-            return res.status(400).json({ response: "Invalid Account details", error: verification.message });
-        }
+        if (activeProvider === "paystack") {
+            // Paystack flow
+            verification = await verifyPaystackAccount(account_number, bank_code);
+            console.log("PAYSTACK_VERIFICATION:", verification);
 
-        const subaccountData = {
-            account_bank: bank_code,
-            account_number: account_number,
-            business_name: business_name || userData?.settings?.businessName || "EtherBill User",
-            business_email: business_email || user,
-            business_mobile: business_mobile || "08000000000",
-            country: country || "NG",
-            split_value: 0.03
-        };
+            if (!verification.status) {
+                return res.status(400).json({ response: "Invalid Paystack Account details", error: verification.message });
+            }
+            accountName = verification.data.account_name;
 
-        const idempotencyKey = `sub_${user.split('@')[0]}_${account_number}_${Date.now()}`;
-        let fwResponse = await createSubaccount(subaccountData, "percentage", idempotencyKey);
+            const subaccountData = {
+                business_name: business_name || userData?.settings?.businessName || "Steadybill User",
+                settlement_bank: bank_code,
+                account_number: account_number,
+                percentage_charge: 3
+            };
+            subaccountResult = await createPaystackSubaccount(subaccountData);
+            console.log("PAYSTACK_SUBACCOUNT_RESPONSE:", subaccountResult);
 
-        console.log("FLW_SUBACCOUNT_RESPONSE:", fwResponse);
+            if (!subaccountResult.status) {
+                return res.status(400).json({ response: subaccountResult.message || "Failed to create Paystack subaccount" });
+            }
 
-        if (fwResponse.status !== "success") {
-            // [NEW] If subaccount already exists, try to find it in the list
-            if (fwResponse.message && fwResponse.message.toLowerCase().includes("already exists")) {
-                console.log("Duplicate subaccount detected. Fetching existing subaccount ID...");
+        } else {
+            // Flutterwave flow (Legacy/Default)
+            verification = await verifyAccount({ account_number, account_bank: bank_code });
+            console.log("FLW_VERIFICATION:", verification);
+
+            if (verification.status === "error") {
+                return res.status(400).json({ response: "Invalid FLW Account details", error: verification.message });
+            }
+            accountName = verification.data ? (verification.data.account_name || verification.data.accountName) : "";
+
+            const subaccountData = {
+                account_bank: bank_code,
+                account_number: account_number,
+                business_name: business_name || userData?.settings?.businessName || "Steadybill User",
+                business_email: business_email || user,
+                business_mobile: business_mobile || "08000000000",
+                country: country || "NG",
+                split_value: 0.03
+            };
+
+            const idempotencyKey = `sub_${user.split('@')[0]}_${account_number}_${Date.now()}`;
+            subaccountResult = await createSubaccount(subaccountData, "percentage", idempotencyKey);
+            console.log("FLW_SUBACCOUNT_RESPONSE:", subaccountResult);
+
+            if (subaccountResult.status !== "success" && subaccountResult.message?.toLowerCase().includes("already exists")) {
                 const { listSubaccounts } = require("../../services/flutterwave");
                 const listResp = await listSubaccounts();
-
                 if (listResp.status === "success" && Array.isArray(listResp.data)) {
-                    // Flutterwave might return bank_code or account_bank in the list
                     const existing = listResp.data.find(sub =>
                         sub.account_number === account_number &&
                         (sub.account_bank === bank_code || sub.bank_code === bank_code)
                     );
                     if (existing) {
-                        console.log("Found existing subaccount:", existing.subaccount_id || existing.id);
-                        // Ensure the data object has the consistent subaccount_id field we expect
-                        fwResponse = {
-                            status: "success",
-                            data: {
-                                ...existing,
-                                subaccount_id: existing.subaccount_id || existing.id
-                            }
-                        };
+                        subaccountResult = { status: "success", data: { ...existing, subaccount_id: existing.subaccount_id || existing.id } };
                     }
                 }
             }
-        }
 
-        if (fwResponse.status !== "success") {
-            return res.status(400).json({
-                response: fwResponse.message || "Failed to create payout account"
-            });
+            if (subaccountResult.status !== "success") {
+                return res.status(400).json({ response: subaccountResult.message || "Failed to create Flutterwave payout account" });
+            }
         }
 
         const payoutDetails = {
-            subaccount_id: (fwResponse.data && (fwResponse.data.subaccount_id || fwResponse.data.id)),
-            bank_name: (fwResponse.data && fwResponse.data.bank_name) || "Verified Bank",
+            subaccount_id: activeProvider === "paystack" ? subaccountResult.data.subaccount_code : (subaccountResult.data.subaccount_id || subaccountResult.data.id),
+            bank_name: (subaccountResult.data && subaccountResult.data.bank_name) || (activeProvider === "paystack" ? subaccountResult.data.settlement_bank : "Verified Bank"),
             bank_code: bank_code,
             account_number: account_number,
-            account_name: verification.data ? (verification.data.account_name || verification.data.accountName) : "",
-            verified: true
+            account_name: accountName,
+            verified: true,
+            provider: activeProvider
         };
-        console.log("Saving Payout to DB:", payoutDetails);
 
-        await users.updateOne({ email: user }, { $set: { payout: payoutDetails } });
+        console.log(`Saving ${activeProvider} Payout to DB:`, payoutDetails);
+
+        // We store it in a way that supports multiple providers but keeps a primary "active" one
+        const updateQuery = { $set: { "payout": payoutDetails } };
+        // Also save to a provider specific key for persistence
+        updateQuery.$set[`payouts.${activeProvider}`] = payoutDetails;
+
+        await users.updateOne({ email: user }, updateQuery);
         return res.status(200).json({ response: "Payout account set up successfully", data: payoutDetails });
 
     } catch (error) {
@@ -112,24 +134,37 @@ exports.setupPayout = async (req, res) => {
 
 exports.resolveBankAccount = async (req, res) => {
     try {
-        const { account_number, bank_code } = req.body;
-        console.log(`[RESOLVE_START] Request to resolve account: ${account_number} @ ${bank_code}`);
+        const { account_number, bank_code, provider } = req.body;
+        const activeProvider = provider || "flutterwave";
+        console.log(`[RESOLVE_START] Request to resolve account: ${account_number} @ ${bank_code} (${activeProvider})`);
 
         if (!account_number || !bank_code) {
             console.log("[RESOLVE_ERROR] Missing parameters");
             return res.status(400).json({ response: "Account number and bank code required" });
         }
 
-        const verification = await verifyAccount({ account_number, account_bank: bank_code });
+        let verification;
+        if (activeProvider === "paystack") {
+            verification = await verifyPaystackAccount(account_number, bank_code);
+        } else {
+            verification = await verifyAccount({ account_number, account_bank: bank_code });
+        }
+
         console.log("RESOLVE_ACCOUNT_VERIFICATION_RESULT:", JSON.stringify(verification, null, 2));
 
-        if (verification.status === "success") {
-            console.log("[RESOLVE_SUCCESS] Account verified successfully");
-            return res.status(200).json({ response: "Account verified", data: verification.data });
+        if (activeProvider === "paystack") {
+            if (verification.status) {
+                return res.status(200).json({ response: "Account verified", data: { account_name: verification.data.account_name } });
+            }
         } else {
-            console.error(`[RESOLVE_FAILURE] Verification failed: ${verification.message}`);
-            return res.status(400).json({ response: verification.message || "Could not verify account details" });
+            if (verification.status === "success") {
+                return res.status(200).json({ response: "Account verified", data: verification.data });
+            }
         }
+
+        console.error(`[RESOLVE_FAILURE] Verification failed: ${verification.message}`);
+        return res.status(400).json({ response: verification.message || "Could not verify account details" });
+
     } catch (error) {
         console.error("[RESOLVE_EXCEPTION] Unexpected error:", error);
         return res.status(500).json({ response: "Internal Server Error" });
@@ -138,10 +173,17 @@ exports.resolveBankAccount = async (req, res) => {
 
 exports.fetchBanks = async (req, res) => {
     try {
-        const { country } = req.query;
-        const response = await getBanks(country || "NG");
+        const { country, provider } = req.query;
+        const activeProvider = provider || "flutterwave";
 
-        if (response.status === "success") {
+        let response;
+        if (activeProvider === "paystack") {
+            response = await getPaystackBanks(country || "NG");
+        } else {
+            response = await getBanks(country || "NG");
+        }
+
+        if (response.status === "success" || response.status === true) {
             return res.status(200).json({ response: "Banks fetched", data: response.data });
         } else {
             return res.status(400).json({ response: response.message || "Failed to fetch banks" });
