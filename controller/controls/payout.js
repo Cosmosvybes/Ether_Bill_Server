@@ -108,11 +108,20 @@ exports.setupPayout = async (req, res) => {
         console.log(`Saving ${activeProvider} Payout to DB:`, payoutDetails);
 
         // We store it in a way that supports multiple providers but keeps a primary "active" one
-        const updateQuery = { $set: { "payout": payoutDetails } };
-        // Also save to a provider specific key for persistence
-        updateQuery.$set[`payouts.${activeProvider}`] = payoutDetails;
+        // Migration: If the legacy 'payout' exists but the provider-specific one doesn't, migrate it.
+        const updateDoc = {
+            payout: payoutDetails,
+            [`payouts.${activeProvider}`]: payoutDetails
+        };
 
-        await users.updateOne({ email: user }, updateQuery);
+        if (userData.payout && !userData.payouts?.[userData.payout.provider || "flutterwave"]) {
+            updateDoc[`payouts.${userData.payout.provider || "flutterwave"}`] = userData.payout;
+        }
+
+        await users.updateOne(
+            { email: user },
+            { $set: updateDoc }
+        );
         return res.status(200).json({ response: "Payout account set up successfully", data: payoutDetails });
 
     } catch (error) {
