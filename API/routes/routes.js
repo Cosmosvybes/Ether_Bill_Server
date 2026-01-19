@@ -12,6 +12,7 @@ const {
   updatePassword,
   upgradeUserSubscription,
   topupSMSCredits,
+  resendVerification,
 } = require("../Endpoints/account");
 
 const {
@@ -53,6 +54,7 @@ router.post("/account/settings", Auth, accountSettings);
 router.post("/reset-password", resetPasswordCode);
 router.post("/verify_code", verifyCode);
 router.post("/update_password", updatePassword);
+router.post("/resend_verification", resendVerification);
 router.post("/account/upgrade", Auth, upgradeUserSubscription);
 router.post("/account/sms/topup", Auth, topupSMSCredits);
 router.get("/escrow_proofs/", Auth, getUploadedEscrowDocs);

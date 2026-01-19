@@ -28,27 +28,30 @@ exports.signUp = async (req, res) => {
       const { insertedId } = await createAccount(user);
 
       if (insertedId) {
-        // [NEW] Generate and Send 2FA Code
-        const verificationCode = Math.floor(100000 + Math.random() * 900000); // 6-digit code
-        await updateVerificationCode(Email, verificationCode);
+        const { success, code } = await sendVerificationEmail(Email, "Welcome to SteadyBill! 🚀");
 
-        const html = `
-          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #7c3aed;">Welcome to SteadyBill! 🚀</h2>
-            <p>Your verification code is:</p>
-            <h1 style="background: #f3f4f6; padding: 10px; display: inline-block; border-radius: 5px; letter-spacing: 5px;">${verificationCode}</h1>
-            <p>Please enter this code to activate your account.</p>
-          </div>
-        `;
-
-        await mailer("Verify Your Account", Email, html);
-
+        if (success) {
+          return res.status(200).send({
+            response: "Verification code sent to your email",
+            requireVerification: true
+          });
+        } else {
+          return res.status(200).send({
+            response: "Account created but failed to send verification email. Please use the 'Resend' option on the verification page.",
+            requireVerification: true
+          });
+        }
+      }
+      return res.status(503).send({ response: "Something went wrong" });
+    } else {
+      // [NEW] If user exists but is NOT verified, resend code and allow them to proceed to verification
+      if (isAnExistingUser.emailVerified === false) {
+        const { success } = await sendVerificationEmail(Email, "Verify Your Account (Resent)");
         return res.status(200).send({
-          response: "Verification code sent to your email",
+          response: success ? "Account already exists but is unverified. A new code has been sent." : "Account exists and is unverified. Use the 'Resend' option if you don't see the code.",
           requireVerification: true
         });
       }
-      return res.status(503).send({ response: "Something went wrong" });
     }
     res
       .status(403)
@@ -57,6 +60,32 @@ exports.signUp = async (req, res) => {
     res.status(500).send({ response: "connection error" });
   }
 };
+
+async function sendVerificationEmail(email, title = "Verify Your Account") {
+  const verificationCode = Math.floor(100000 + Math.random() * 900000); // 6-digit code
+
+  const html = `
+    <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+      <h2 style="color: #7c3aed;">${title}</h2>
+      <p>Your verification code is:</p>
+      <h1 style="background: #f3f4f6; padding: 10px; display: inline-block; border-radius: 5px; letter-spacing: 5px;">${verificationCode}</h1>
+      <p>Please enter this code to continue.</p>
+      <p style="color: #666; font-size: 12px; margin-top: 20px;">If you didn't request this, please ignore this email.</p>
+    </div>
+  `;
+
+  try {
+    const mailResponse = await mailer(title, email, html);
+    if (mailResponse.success) {
+      await updateVerificationCode(email, verificationCode);
+      return { success: true, code: verificationCode };
+    }
+    return { success: false };
+  } catch (error) {
+    console.error("Email sending helper error:", error);
+    return { success: false };
+  }
+}
 
 //?? //////////////////////////////////////////////////////////
 //  SIGN IN
@@ -176,29 +205,45 @@ exports.accountSettings = async (req, res) => {
 //?? //////////////////////////////////////////////////////////
 
 exports.resetPasswordCode = async (req, res) => {
-  const { email, emailInstance, verificationCode } = req.body;
+  const { email } = req.body;
 
   try {
     const user = await getUser(email.toLowerCase());
     if (!user) return res.status(404).send({ response: "User not found" });
 
-    const response = await mailer(
-      "PASSWORD RESET",
-      email.toLowerCase(),
-      emailInstance
-    );
-    await updateVerificationCode(email, verificationCode);
-    if (response) {
+    const { success } = await sendVerificationEmail(email.toLowerCase(), "Password Reset Code");
+
+    if (success) {
       return res
         .status(200)
-        .send({ message: `Verication code sent to ${email}` });
+        .send({ message: `Verification code sent to ${email}` });
     } else {
       return res
         .status(503)
-        .send({ response: "Failed to send verification code" });
+        .send({ response: "Failed to send verification code. Please try again." });
     }
   } catch (error) {
-    res.status(500).send({ reponse: "Operation failed try again" });
+    res.status(500).send({ response: "Operation failed try again" });
+  }
+};
+
+exports.resendVerification = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).send({ response: "Email is required" });
+
+  try {
+    const user = await getUser(email.toLowerCase());
+    if (!user) return res.status(404).send({ response: "User not found" });
+
+    const { success } = await sendVerificationEmail(email.toLowerCase(), "New Verification Code");
+
+    if (success) {
+      return res.status(200).send({ response: "A new code has been sent to your email" });
+    } else {
+      return res.status(503).send({ response: "Failed to send code. Please try again later." });
+    }
+  } catch (error) {
+    res.status(500).send({ response: "Internal server error" });
   }
 };
 
