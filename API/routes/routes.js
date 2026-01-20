@@ -73,7 +73,7 @@ router.post("/payout/resolve", Auth, resolveBankAccount);
 
 // Admin Routes
 const { isAdmin } = require("../../middleware/auth/isAdmin");
-const { getStats, getAllUsers, toggleProStatus, adjustFreemiumCount, bulkAddFreemium, updateBroadcast, makeMeAdmin } = require("../Endpoints/admin");
+const { getStats, getAllUsers, toggleProStatus, adjustFreemiumCount, bulkAddFreemium, updateBroadcast, makeMeAdmin, sendBulkEmail } = require("../Endpoints/admin");
 router.post("/dev/make-admin", Auth, makeMeAdmin);
 router.get("/admin/stats", Auth, isAdmin, getStats);
 router.get("/admin/users", Auth, isAdmin, getAllUsers);
@@ -81,6 +81,7 @@ router.patch("/admin/user/toggle-pro", Auth, isAdmin, toggleProStatus);
 router.patch("/admin/user/adjust-freemium", Auth, isAdmin, adjustFreemiumCount);
 router.post("/admin/users/bulk-add-credits", Auth, isAdmin, bulkAddFreemium);
 router.post("/admin/broadcast/update", Auth, isAdmin, updateBroadcast);
+router.post("/admin/mail/send", Auth, isAdmin, sendBulkEmail);
 
 const { fetchPublicInvoice, verifyPublicPayment } = require("../Endpoints/public");
 const { getBroadcast } = require("../Endpoints/public_info");

@@ -312,6 +312,60 @@ exports.bulkAddFreemium = async (req, res) => {
 };
 
 /**
+ * Send bulk email to all users (updates, announcements, etc.)
+ */
+exports.sendBulkEmail = async (req, res) => {
+    const { subject, body } = req.body;
+
+    if (!subject || !body) {
+        return res.status(400).json({ response: "Subject and body are required" });
+    }
+
+    try {
+        // 1. Fetch all users to send emails
+        const allUsers = await users.find({}, { projection: { email: 1, firstname: 1 } }).toArray();
+
+        // 2. Send emails in background
+        (async () => {
+            console.log(`[Admin] Starting bulk mailing for ${allUsers.length} users... Message: ${subject}`);
+            for (const user of allUsers) {
+                if (!user.email) continue;
+
+                const html = `
+                  <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="https://www.steadybill.pro/logo.png" alt="SteadyBill" style="width: 150px;">
+                    </div>
+                    <div style="line-height: 1.6; color: #334155;">
+                        <p>Hi ${user.firstname || 'there'},</p>
+                        ${body}
+                    </div>
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #94a3b8; text-align: center;">
+                        <p>© ${new Date().getFullYear()} SteadyBill. All rights reserved.</p>
+                        <p>You received this email because you're a registered user on SteadyBill.</p>
+                    </div>
+                  </div>
+                `;
+
+                try {
+                    await mailer(subject, user.email, html);
+                    // Add a small delay to respect rate limits
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (err) {
+                    console.error(`[Admin] Failed to email ${user.email}:`, err.message);
+                }
+            }
+            console.log("[Admin] Bulk mailing completed.");
+        })();
+
+        res.status(200).json({ response: `Bulk email process started for ${allUsers.length} users.` });
+    } catch (error) {
+        console.error("Bulk Mailing Error:", error);
+        res.status(500).json({ response: "Error starting bulk mailing process" });
+    }
+};
+
+/**
  * Update system-wide broadcast message
  */
 exports.updateBroadcast = async (req, res) => {

@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../FE/invoice-logger"
+		}
+	],
+	"settings": {}
+}
