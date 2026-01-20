@@ -328,21 +328,32 @@ exports.sendBulkEmail = async (req, res) => {
         // 2. Send emails in background
         (async () => {
             console.log(`[Admin] Starting bulk mailing for ${allUsers.length} users... Message: ${subject}`);
+
+            // Standardize body: convert newlines to HTML breaks and escape basic HTML if any
+            const formattedBody = body.replace(/\n/g, '<br/>');
+
             for (const user of allUsers) {
                 if (!user.email) continue;
 
                 const html = `
-                  <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="https://www.steadybill.pro/logo.png" alt="SteadyBill" style="width: 150px;">
-                    </div>
-                    <div style="line-height: 1.6; color: #334155;">
-                        <p>Hi ${user.firstname || 'there'},</p>
-                        ${body}
-                    </div>
-                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #94a3b8; text-align: center;">
-                        <p>© ${new Date().getFullYear()} SteadyBill. All rights reserved.</p>
-                        <p>You received this email because you're a registered user on SteadyBill.</p>
+                  <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px 20px; background-color: #f8fafc; color: #1e293b;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <div style="padding: 32px; background-color: #7c3aed; text-align: center;">
+                            <img src="https://www.steadybill.pro/logo.png" alt="SteadyBill" style="width: 140px; filter: brightness(0) invert(1);">
+                        </div>
+                        <div style="padding: 40px 32px; line-height: 1.8;">
+                            <h2 style="margin-top: 0; color: #0f172a; font-size: 20px; font-weight: 800;">Hi ${user.firstname || 'there'},</h2>
+                            <div style="font-size: 16px; color: #334155;">
+                                ${formattedBody}
+                            </div>
+                            <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e2e8f0; text-align: center;">
+                                <a href="https://www.steadybill.pro/dashboard" style="display: inline-block; padding: 14px 28px; background-color: #7c3aed; color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 14px;">Go to Dashboard</a>
+                            </div>
+                        </div>
+                        <div style="padding: 24px 32px; background-color: #f1f5f9; text-align: center; font-size: 12px; color: #64748b;">
+                            <p style="margin: 0;">© ${new Date().getFullYear()} SteadyBill. All rights reserved.</p>
+                            <p style="margin: 4px 0 0;">You received this email because you're a registered user on SteadyBill.</p>
+                        </div>
                     </div>
                   </div>
                 `;
@@ -362,6 +373,55 @@ exports.sendBulkEmail = async (req, res) => {
     } catch (error) {
         console.error("Bulk Mailing Error:", error);
         res.status(500).json({ response: "Error starting bulk mailing process" });
+    }
+};
+
+/**
+ * Send email to a specific user
+ */
+exports.sendSingleEmail = async (req, res) => {
+    const { email, subject, body } = req.body;
+
+    if (!email || !subject || !body) {
+        return res.status(400).json({ response: "Email, subject, and body are required" });
+    }
+
+    try {
+        const user = await users.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ response: "User not found" });
+        }
+
+        const formattedBody = body.replace(/\n/g, '<br/>');
+
+        const html = `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px 20px; background-color: #f8fafc; color: #1e293b;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <div style="padding: 32px; background-color: #7c3aed; text-align: center;">
+                    <img src="https://www.steadybill.pro/logo.png" alt="SteadyBill" style="width: 140px; filter: brightness(0) invert(1);">
+                </div>
+                <div style="padding: 40px 32px; line-height: 1.8;">
+                    <h2 style="margin-top: 0; color: #0f172a; font-size: 20px; font-weight: 800;">Hi ${user.firstname || 'there'},</h2>
+                    <div style="font-size: 16px; color: #334155;">
+                        ${formattedBody}
+                    </div>
+                    <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e2e8f0; text-align: center;">
+                        <a href="https://www.steadybill.pro/dashboard" style="display: inline-block; padding: 14px 28px; background-color: #7c3aed; color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 14px;">Go to Dashboard</a>
+                    </div>
+                </div>
+                <div style="padding: 24px 32px; background-color: #f1f5f9; text-align: center; font-size: 12px; color: #64748b;">
+                    <p style="margin: 0;">© ${new Date().getFullYear()} SteadyBill. All rights reserved.</p>
+                    <p style="margin: 4px 0 0;">You received this email because you're a registered user on SteadyBill.</p>
+                </div>
+            </div>
+          </div>
+        `;
+
+        await mailer(subject, email, html);
+        res.status(200).json({ response: `Email sent successfully to ${email}` });
+    } catch (error) {
+        console.error("Single Mailing Error:", error);
+        res.status(500).json({ response: "Error sending email" });
     }
 };
 
